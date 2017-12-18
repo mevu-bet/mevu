@@ -7,64 +7,65 @@ import "./Admin.sol";
 import "./Wagers.sol";
 import "./Rewards.sol";
 import "./Oracles.sol";
-import "./Lottery.sol";
+
+import "./MvuToken.sol";
+
 
 contract Mevu is Ownable, usingOraclize {
 
     address mevuWallet;
-    Events public events;
-    Admin public admin;
-    Wagers public wagers;
-    OracleVerifier oracleVerif;
-    bool public contractPaused = false;
-    uint mevuBalance = 0;
-    uint standardEventIdCounter = 0;
+    Events events;
+    Admin admin;
+    Wagers wagers;
+    Oracles oracles;
+    Rewards rewards;
+   
+    MvuToken mvuToken;
+    bool  contractPaused = false;
+    bool  randomNumRequired = false;  
+    uint  mevuBalance = 0;
+    uint  lotteryBalance = 0;    
     uint oraclizeGasLimit = 500000;
     uint oracleServiceFee = 3; //Percent
+    //  TODO: Set equal to launch date + one month in unix epoch seocnds
+    uint  newMonth = 1515866437;
+    uint  monthSeconds = 2592000;  
+       
     mapping (bytes32 => bool) validIds;
     mapping (address => bool) abandoned;
-    bytes32[] oracleQueue;  
+    bytes32[] oracleQueue;
 
-    event Callback(uint currentTime, string result);
+   
+    
+
+
+    //event newOraclizeQuery(string description);  
 
     modifier notPaused() {
         require (!contractPaused);
         _;
     }
-    modifier onlyAdmin () {
-        require (msg.sender == admin);
-        _;
-    }
 
-    modifier onlyLottery () {
-        require (msg.sender == lottery);
+    modifier onlyBettor (bytes32 wagerId) {
+        require (msg.sender == wagers.getMaker(wagerId) || msg.sender == wagers.getTaker(wagerId));
         _;
-    }
-
-    modifier onlyOraclesContract () {
-        require (msg.sender == oracles);
-        _;
-    }
-
-     modifier notPaused() {
-        require (!contractPaused);
-        _;
-    }
+    }   
 
     modifier onlyPaused() {
         require (contractPaused);
         _;
     }
 
-    modifier onlyMaker(bytes32 wagerId) {
-        require (msg.sender == wagers.getMaker(wagerId));
-        _;
+      modifier onlyAuth () {
+        require(msg.sender == address(admin) ||
+                msg.sender == address(this.owner)||
+                msg.sender == address(this) ||
+                
+                msg.sender == address(wagers));
+                _;
     }
-    
-    modifier onlyTaker(bytes32 wagerId) {
-        require (msg.sender == wagers.getTaker(wagerId));
-        _;
-    }   
+
+      
     
     modifier onlyOracle (bytes32 oracleId) {
         bool oracle = false;
@@ -79,7 +80,7 @@ contract Mevu is Ownable, usingOraclize {
     }
     
     
-    modifier eventUnlocked(uint256 eventId){
+    modifier eventUnlocked(bytes32 eventId){
         require (!events.getLocked(eventId));
         _;
     }
@@ -89,111 +90,101 @@ contract Mevu is Ownable, usingOraclize {
         _;
     }
     
-    modifier notTaken (bytes32 wagerId) {
-        require (wagers.getTaker(wagerId) == address(0));
-        _;
-    }    
+   
     
-    modifier mustBeVoteReady(uint256 eventId) {
+    modifier mustBeVoteReady(bytes32 eventId) {
         require (events.getVoteReady(eventId));
         _;           
     }  
 
-    modifier requireMinWager() {
-        require (msg.value >= admin.getMinWagerAmount());
-        _;
-    }
-    
-    modifier checkBalance (uint256 wagerValue) {
-        require (rewards.getUnlockedEthBalance(msg.sender) + msg.value >= wagerValue);
-        _;
-    }   
+ 
 
-    modifier mustBeCorrectValue(bytes32 wagerId) {
-        require (msg.value == wagers.getOrigValue(wagerId) / (wagers.getOdds(wagerId) / 100));
+
+  
+
+    modifier mustBeTaken (bytes32 wagerId) {
+        require (wagers.getTaker(wagerId) != address(0));
         _;
     }
 
-    modifier onlyVerified() {
-        require (oracleVerif.checkVerification(msg.sender));
-        _;
+    modifier notSettled(bytes32 wagerId) {
+        require (!wagers.getSettled(wagerId));
+        _;           
     }
-    
-    modifier onlyOracle (bytes32 oracleId) {
-        bool oracle = false;
-        for (uint i = 0; i < Mevu(mevuContract).getOracleLength(msg.sender); i++) {
-            if (Mevu(mevuContract).getOracleAt(msg.sender, i) == oracleId) {
-                oracle = true;
-            }
-        }
-        if (oracle){
-            _;
+
+    function () payable {
+        if (msg.sender != address(wagers)) {
+            mevuBalance += msg.value;
         }
     }
+
+
 
     // Constructor 
-    function Mevu ()  payable { 
+    function Mevu () payable { 
         OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);               
-        mevuWallet = msg.sender;
-        events = deployEventsContract();
-        bytes32 queryId = oraclize_query(100, "URL", "", oraclizeGasLimit);
-        validIds[queryId] = true;
-        wagers = deployWagersContract();
-        oracleVerif = deployOracleVerifier();
-        // deployOracles();
-        // deployRewards();
-        // deployLottery();
-        admin = deployAdminContract();      
+        mevuWallet = msg.sender;        
+        //bytes32 queryId = oraclize_query(100, "URL", "", oraclizeGasLimit);
+        //validIds[queryId] = true;          
+  
     }
 
-    function deployEventsContract () internal returns (Events) {
-        return new Events();
+    function setEventsContract (address thisAddr) external onlyOwner {
+        events = Events(thisAddr);        
     }
 
-    function deployAdminContract () internal returns (Admin) {
-        return new Admin();
+    function setOraclesContract (address thisAddr) external onlyOwner {
+        oracles = Oracles(thisAddr);
     }
 
-    function deployWagersContract () internal returns (Wager) {
-        return new Wager();
+    function setRewardsContract   (address thisAddr) external onlyOwner {
+        rewards = Rewards(thisAddr);
     }
 
-    function deployOracleVerifContract () internal returns (OracleVerifer) {
-        return new OracleVerifier();
+    function setAdminContract (address thisAddr) external onlyOwner {
+        admin = Admin(thisAddr);
     }
+
+    function setWagersContract (address thisAddr) external onlyOwner {
+        wagers = Wagers(thisAddr);        
+    }
+
+    
+    function setMvuTokenContract (address thisAddr) external onlyOwner {
+        mvuToken = MvuToken(thisAddr);
+    }
+
+   
 
   
     function __callback (bytes32 myid, string result) notPaused {        
-        if (!validIds[myid]) revert;
-        if (msg.sender != oraclize_cbAddress()) revert;
+         require(validIds[myid]);
+         require(msg.sender == oraclize_cbAddress());
        
        
         if (randomNumRequired){        
-            uint maxRange = 2**(8* 7); // this is the highest uint we want to get. It should never be greater than 2^(8*N), where N is the number of random bytes we had asked the datasource to return
-            uint randomNumber = uint(sha3(result)) % maxRange; // this is an efficient way to get the uint out in the [0, maxRange] range
-            randomNumRequired = false;   
-            address potentialWinner = oracleList[randomNumber]; 
-            payoutLottery(potentialWinner);
-        } else {   
+             uint maxRange = 2**(8* 7); // this is the highest uint we want to get. It should never be greater than 2^(8*N), where N is the number of random bytes we had asked the datasource to return
+             uint randomNumber = uint(keccak256(result)) % maxRange; // this is an efficient way to get the uint out in the [0, maxRange] range
+             randomNumRequired = false;   
+             address potentialWinner = oracles.getOracleListAt(randomNumber);
+             payoutLottery(potentialWinner);
+         } else {   
             // Go through oracle queue and settle wagers with voteReady events, oracles recieve higher fee
-            Rewards(rewardsContract).oracleSettle();       
+            oracles.oracleSettle();       
             // Make recently completed events voteReady
             events.voteReady();            
-            newOraclizeQuery("Oraclize query was sent, standing by for the answer..");
-            bytes32 queryId = oraclize_query(Admin(adminContract).getCallbackInterval(), "URL", "", Admin(adminContract).getCallbackGasLimit());
-            validIds[queryId] = true;
+            //newOraclizeQuery("Oraclize query was sent, standing by for the answer..");
+            bytes32 queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "");
+        validIds[queryId] = true;          
+           
+            
         }        
-        Lottery(lotteryContract).checkLottery();
-    }
-
- 
-    
+        checkLottery();
+    }    
 
     function setMevuWallet (address newAddress) onlyOwner {
         mevuWallet = newAddress;       
-    }
-
-    
+    }    
 
     /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
       * @param name The name of the event to be diplayed.
@@ -243,94 +234,19 @@ contract Mevu is Ownable, usingOraclize {
         events.cancelStandardEvent(eventId);       
     }
 
-    /** @dev Creates a new Standard wager for a user to take and adds it to the standardWagers mapping.
-      * @param id sha3 hash of the msg.sender concat timestamp.
-      * @param eventId int id for the standard event the wager is based on.
-      * @param odds decimal of maker chosen odds * 100.         
-      */
-    function makeWager(
-        bytes32 wagerId,
-        uint value,       
-        uint eventId,
-        uint odds,
-        uint makerChoice
-    )
-        eventUnlocked(eventId)
-        requireMinWager
-        checkBalance(value)
-        notPaused
-        payable 
-    {        
-        address maker = msg.sender;
-        uint takerChoice;
-        if (makerChoice == 1) {
-          takerChoice = 2;
-        } else {
-           takerChoice = 1;
-        }
-        uint256 winningValue = value + (value / (odds/100));       
-        wagers.makeWager(wagerId, value, winningValue, eventId, maker, makerChoice, takerChoice, odds);     
-        events.addWager(eventId, wagerId);
-        rewards.addEth(msg.sender, msg.value);       
-        rewards.subUnlockedEth(msg.sender, (value - msg.value));     
-    }
-
-    function cancelWager (
-        bytes32 wagerId, 
-        bool withdraw
-    ) 
-        onlyMaker(wagerId)
-        notPaused
-        notTaken(wagerId)
-        wagerUnlocked(wagerId) 
-    {          
-        wagers.setLocked(wagerId);
-        wagers.setSettled(wagerId);                   
-        if (withdraw) {
-            rewards.subEth(msg.sender, thisWager.value);                
-            msg.sender.transfer (wagers.getOrigValue(wagerId));
-        } else {
-            rewards.addUnlockedEth(msg.sender, thisWager.value);
-        }            
-    }
-
-    function requestWagerCancel(bytes32 wagerId) 
-        mustBeTaken(wagerId) 
-        notSettled(wagerId) 
-    {       
-        if (msg.sender == wagers.getTaker(wagerId)) {
-            if (wagers.getMakerCancelRequest(wagerId)) {            
-                wagers.setSettled(wagerId);                
-                rewards.addUnlockedEth(wagers.getMaker(wagerId), wagers.getOrigValue(wagerId)); 
-                rewards.addUnlockedEth(wagers.getTaker(wagerId),  (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
-            } else {
-                wagers.setTakerCancelRequest(wagerId);
-            }
-        }
-        if (msg.sender ==  wagers.getMaker(wagerId)) {
-            if (wagers.getTakerCancelRequest(wagerId)) {            
-                wagers.setSettled(wagerId);              
-                rewards.addUnlockedEth(wagers.getMaker(wagerId), wagers.getOrigValue(wagerId));
-                rewards.addUnlockedEth(wagers.getTaker(wagerId),  (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
-            } else {
-                wagers.setMakerCancelRequest(wagerId);
-            }
-        }        
-    }  
-
-    function abandonContract() external onlyPaused {
-        require(!abandoned[msg.sender]);
-        abandoned[msg.sender] = true;
-        uint ethBalance = rewards.getEthBalance(msg.sender);
-        uint mvuBalance = rewards.getMvuBalance(msg.sender);
-        if (ethBalance > 0) {
-            msg.sender.transfer(ethBalance);           
-        }
-        if (mvuBalance > 0) {
-            mvuToken.transfer(msg.sender, mvuBalance);
-        }
-    } 
-    
+   
+       function abandonContract() external onlyPaused {
+           require(!abandoned[msg.sender]);
+           abandoned[msg.sender] = true;
+           uint ethBalance =  rewards.getEthBalance(msg.sender);
+           uint mvuBalance = rewards.getMvuBalance(msg.sender);
+           if (ethBalance > 0) {
+               msg.sender.transfer(ethBalance);           
+           }
+           if (mvuBalance > 0) {
+               mvuToken.transfer(msg.sender, mvuBalance);
+           }
+       }     
     
     //  function updateWager (
     //     bytes32 wagerId,
@@ -365,98 +281,83 @@ contract Mevu is Ownable, usingOraclize {
     // }
 
 
+    
+
      function withdraw(
         uint eth,
         uint mvu
+
     )
         external
-        notPaused 
+         
     { 
-        if (rewards.getUnlockedEthBalance(msg.sender) >= eth) {
+        require (rewards.getUnlockedEthBalance(msg.sender) >= eth);
             rewards.subUnlockedEth(msg.sender, eth);
             rewards.subEth(msg.sender, eth);
             msg.sender.transfer(eth);
-        }
-        if (rewards.getUnlockedMvuBalance(msg.sender) >= mvu) {
-            rewards.subUnlockedMvu(msg.sender, mvu);
-            rewards.subMvu(msg.sender, mvu);
-            mvuToken.transfer (msg.sender, mvu);
-        }  
+        
+        require (rewards.getUnlockedMvuBalance(msg.sender) >= mvu);
+           rewards.subUnlockedMvu(msg.sender, mvu);
+           rewards.subMvu(msg.sender, mvu);
+           mvuToken.transfer (msg.sender, mvu);
+         
     } 
     
-     /** @dev Takes a listed wager for a user -- adds address to StandardWager struct.
-      * @param id sha3 hash of the msg.sender concat timestamp.         
-      */
-    function takeStandardWager (
-        bytes32 id      
-    )   
-        eventUnlocked(wagers.getEventId(id))
-        wagerUnlocked(id)
-        mustBeCorrectValue(id)
-        notPaused
-        payable 
-    {
-        address taker = msg.sender;
-        wagers.takeWager(id, taker);        
-        rewards.addEth(msg.sender, msg.value);      
-    }    
+
     
     /** @dev Enters the makers vote for who actually won after the event is over.               
       * @param wagerId bytes32 id for the wager.
       * @param winnerVote number representing who the creator thinks won the match         
       */
-    function submitMakerVote (      
+    function submitVote (      
         bytes32 wagerId,
         uint winnerVote
     ) 
-        onlyMaker(wagerId) 
+        onlyBettor(wagerId) 
         mustBeVoteReady(wagers.getEventId(wagerId))
         notPaused 
     {
-        bytes32 eventId = wagers.getEventId(wagerId);        
-        wagers.setMakerWinVote (wagerId, winnerVote);
+        bytes32 eventId = wagers.getEventId(wagerId);
+        if (msg.sender == wagers.getMaker(wagerId)){        
+            wagers.setMakerWinVote (wagerId, winnerVote);
+        } else {
+            wagers.setTakerWinVote (wagerId, winnerVote);
+        }
         uint eventWinner = events.getWinner(eventId);
         
         if (eventWinner != 0 && eventWinner != 3) {
-            lateSettle(wagerId, eventWinner);
+           lateSettle(wagerId, eventWinner);
             lateSettledPayout(wagerId);    
         } else {
             if (events.getCancelled(eventId) || events.getWinner(eventId) == 3) {
-                rewards.abortWager(wagerId);                
+                abortWager(wagerId);                
             } else {
-                if (wagers.getTakerWinVote(wagerId) != 0 && events.getVoteReady(eventId)) {
-                    wagers.settle(wagerId);
+                if (wagers.getTakerWinVote(wagerId) != 0 && wagers.getMakerWinVote(wagerId) != 0) {
+                    settle(wagerId);
+                  
                 }
             }       
         }       
     }
 
-
-     function submitTakerVote (      
-        bytes32 wagerId,
-        uint winnerVote
-    ) 
-        onlyTaker(wagerId) 
-        mustBeVoteReady(wagers.getEventId(wagerId))
-        notPaused 
-    {
-        bytes32 eventId = wagers.getEventId(wagerId);        
-        wagers.setTakerWinVote (wagerId, winnerVote);
-        uint eventWinner = events.getWinner(eventId);
+        /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
+       *  been cancelled, refunds all eth.               
+       * @param wagerId bytes32 wagerId of the wager to abort.  
+       */ 
+    function abortWager(bytes32 wagerId) internal {
         
-        if (eventWinner != 0 && eventWinner != 3) {
-            lateSettle(wagerId, eventWinner);
-            lateSettledPayout(wagerId);    
-        } else {
-            if (events.getCancelled(eventId) || events.getWinner(eventId) == 3) {
-                rewards.abortWager(wagerId);                
-            } else {
-                if (wagers.getMakerWinVote(wagerId) != 0 && events.getVoteReady(eventId)) {
-                    wagers.settle(wagerId);
-                }
-            }       
-        }       
+        address maker = wagers.getMaker(wagerId);
+        address taker = wagers.getTaker(wagerId);
+        wagers.setSettled(wagerId);
+        rewards.addUnlockedEth(maker, wagers.getOrigValue(wagerId));       
+        
+        if (taker != address(0)) {         
+            rewards.addUnlockedEth(wagers.getTaker(wagerId), (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
+        } 
+            
     }
+
+
 
 
      /** @dev Settles the wager if both the maker and taker have voted, pays out if they agree, otherwise they need to wait for oracle settlement.               
@@ -467,16 +368,16 @@ contract Mevu is Ownable, usingOraclize {
         address taker = wagers.getMaker(wagerId);
         if (wagers.getMakerWinVote(wagerId) == wagers.getTakerWinVote(wagerId)) {
             if (wagers.getMakerWinVote(wagerId) == wagers.getMakerChoice(wagerId)) {
-                Mevu(mevuContract).setWagerWinner(wagerId, maker);
-                rewards.addEth(maker, wagers.getWinningValue(wagerId) - wagers.getValue(wagerId));
-                rewards.subEth(taker, wagers.getWinningValue(wagerId) - wagers.getValue(wagerId));
+                wagers.setWinner(wagerId, maker);
+                rewards.addEth(maker, wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId));
+                rewards.subEth(taker, wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId));
             } else {
                 if (wagers.getMakerWinVote(wagerId) == 3) {
                     wagers.setWinner(wagerId, address(0));                    
                 } else {
                     wagers.setWinner(wagerId, taker);
-                    rewards.addEth(maker, wagers.getValue(wagerId));
-                    rewards.subEth(taker, wagers.getValue(wagerId));
+                    rewards.addEth(maker, wagers.getOrigValue(wagerId));
+                    rewards.subEth(taker, wagers.getOrigValue(wagerId));
                 }
             }
             payout(wagerId, maker, taker);
@@ -513,7 +414,7 @@ contract Mevu is Ownable, usingOraclize {
         }       
     }
 
-    function lateSettle (bytes32 wagerId, uint eventWinner) onlyMevuContract {
+    function lateSettle (bytes32 wagerId, uint eventWinner) internal {
         address maker = wagers.getMaker(wagerId);
         address taker = wagers.getTaker(wagerId);
         if (wagers.getMakerChoice(wagerId) == eventWinner) {
@@ -526,7 +427,7 @@ contract Mevu is Ownable, usingOraclize {
   /** @dev Pays out the wager after oracle settlement.               
     * @param wagerId bytes32 id for the wager.         
     */
-    function lateSettledPayout(bytes32 wagerId) private {
+    function lateSettledPayout(bytes32 wagerId) internal {
         
         if (!wagers.getSettled(wagerId)) {
             uint origValue = wagers.getOrigValue(wagerId);
@@ -540,8 +441,8 @@ contract Mevu is Ownable, usingOraclize {
             addLotteryBalance(oracleFee); // Too late to reward oracles directly for this wager, fee added to oracle lottery
             address maker = wagers.getMaker(wagerId);
             address taker = wagers.getTaker(wagerId);
-            wagers.setSettle(wagerId);
-            wagers.setLock(wagerId);            
+            wagers.setSettled(wagerId);
+            wagers.setLocked(wagerId);            
             if (wagers.getWinner(wagerId) == maker) { // Maker won
                 rewards.addUnlockedEth(maker, payoutValue);
                 rewards.addEth(maker, (winningValue - origValue));
@@ -552,220 +453,99 @@ contract Mevu is Ownable, usingOraclize {
         }
     }
 
-     /** @dev Registers a user as an Oracle for the chosen event. Before being able to register the user must
-      * allow the contract to move their MVU through the Token contract.      
-      * @param oracleId bytes32 id for the oracle mapping to get struct with info.            
-      * @param eventId int id for the standard event the oracle is registered for.
-      * @param mvuStake Amount of mvu (in lowest base unit) staked.         
-      */
-    function registerOracle (        
-        bytes32 oracleId,
-        uint eventId,
-        uint mvuStake,
-        uint winnerVote
-    ) 
-        eventUnlocked(eventId) 
-        onlyVerified
-        notPaused
-        mustBeVoteReady(eventId) 
-    {
-        require (sha3(strConcat(toString(msg.sender),  bytes32ToString(uintToBytes(eventId)))) == oracleId);       
-        require(mvuStake >= admin.getMinOracleStake()); 
-           
-        if (Mevu(mevuContract).getMvuStake(oracleId) == 0) {
-            if (Mevu(mevuContract).getOracleLength(msg.sender) == 0) {
-                Mevu(mevuContract).addToOracleList(msg.sender);
-            }
-            transferTokensToMevu(msg.sender, mvuStake);             
-            oracles.createOracle(eventId, mvuStake, oracleId, winnerVote, false);               
-            rewards.addMvu(msg.sender, mvuStake);
-            events.addOracle(eventId, msg.sender, mvuStake);
-               
-        }        
-    }  
-     
-    
-    
-    /** @dev Unregisters a user as an Oracle for the chosen event.      
-      * @param oracleId bytes32 id for the oracle mapping to get struct with info.         
-      */
-    function unregisterOracle (bytes32 oracleId)
-        onlyOracle(oracleId)
-        eventUnlocked(oracles.getEventId(oracleId))
-        notPaused 
-    {
-        uint eventId = oracles.getEventId(oracleId);
-        uint mvuStake = oracles.getMvuStake(oracleId);            
-        events.subTotalOracleStake(eventId, mvuStake);          
-        if (rewards.getMvuBalance(msg.sender) >= mvuStake){
-            rewards.subMvu(msg.sender, mvuStake);
-            transferTokensFromMevu (msg.sender, mvuStake);               
-        }            
-
-        oracles.removeOracle(msg.sender, eventId, oracleId);            
-              
-        for (uint256 y = 0; y < Mevu(mevuContract).getStandardEventLength(); y++){
-            if (y == eventId) {
-                for (uint256 x = 0; x < Mevu(mevuContract).getStandardEventOraclesLength(y); x++){
-                    address thisOracle = Mevu(mevuContract).getStandardEventOracleAt(y, x);                       
-                    if(thisOracle == msg.sender) {                          
-                        events.removeOracleFromEvent (y, x);                            
-                    } 
-                }
-            }        
-        }       
-    }
-
-    /** @dev Pay winners of wagers and alter rep of winners and losers, refund both if winner = 0
-      * @param thisWager the standard wager currently being paid out.
-      * @param thisEvent the StandardWagerEvent that is associated with thisWager.           
-      */ 
-    function playerRewards(bytes32 thisWager, bytes32 thisEvent) private {
-      
-        if (events.getWinner(thisEvent) != 0){
-            if (events.getWinner(thisEvent) == 3){
-                if (wagers.getMakerWinVote(thisWager) == 3) {
-                    rewards.addPlayerRep(wagers.getMaker(thisWager), wagers.getWinningValue(thisWager));
-                    rewards.subPlayerRep(wagers.getTaker(thisWager), wagers.getWinningValue(thisWager));                    
-                } else {
-                    rewards.subPlayerRep(wagers.getMaker(thisWager), wagers.getWinningValue(thisWager));
-                    rewards.addPlayerRep(wagers.getTaker(thisWager), wagers.getWinningValue(thisWager));                    
-                }              
-                abortWager(thisWager);
-            } else {
-                rewards.addPlayerRep(wagers.getWinner(thisWager), wagers.getWinningValue(thisWager));
-                rewards.subPlayerRep(wagers.getLoser(thisWager), wagers.getWinningValue(thisWager));                
-                oracleSettledPayout(thisWager);
-            }
-        } else {
-            abortWager(thisWager);
-        }         
-    }
-
-    
-
-    
-    /** @dev Pays out the wager after oracle settlement.               
-      * @param wagerId bytes32 id for the wager.         
-      */
-    function oracleSettledPayout(bytes32 wagerId) private {
+ 
+//     // function cancelEvent (bytes32 eventId)  {
+//     //     oracleRefund(eventId);
+//     //     for (uint i = 0; i < mevu.getWagersLength(eventId); i++) {
+//     //         abortWager(mevu.getEventWager(eventId, i));
+//     //     }
+//     // }
+    // PLayers should call this when an event has been cancelled after thay have made a wager
+     function playerRefund (bytes32 wagerId) external onlyBettor(wagerId) {
+         require (events.getCancelled(wagers.getEventId(wagerId)));
+         require (!wagers.getRefund(msg.sender, wagerId));
+         wagers.setRefund(msg.sender, wagerId);
+         address maker = wagers.getMaker(wagerId);       
+         wagers.setSettled(wagerId);
+         if(msg.sender == maker) {
+             rewards.addUnlockedEth(maker, wagers.getOrigValue(wagerId));
+         } else {         
+             rewards.addUnlockedEth(wagers.getTaker(wagerId), (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
+         }        
         
-        if (!wagers.getSettled(wagerId)) {            
-            uint payoutValue = wagers.getWinningValue(wagerId);
-            uint fee = (payoutValue/100) * oracleServiceFee;
-            addMevuBalance(fee/2);            
-            addLotteryBalance(fee/12);
-            payoutValue -= fee;           
-            uint oracleFee = (fee/12) + (fee/3);
-            wagers.setSettled(wagerId);
-            
-            if (wagers.getWinner(wagerId) == wagers.getMaker(wagerId)) { // Maker won
-                rewards.addUnlockedEth(wagers.getMaker(wagerId), payoutValue);
-                rewards.addEth(wagers.getMaker(wagerId), (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
-           
-            } else { //Taker won
-                rewards.addUnlockedEth(wagers.getTaker(wagerId), payoutValue);
-                rewards.addEth(wagers.getMaker(wagerId),  wagers.getOrigValue(wagerId));          
-             
-            }            
-            events.addOracleEarnings(wagers.getEventId(wagerId), oracleFee);
+     }
+
+
+     /** @dev Calls the oraclize contract for a random number generated through the Wolfram Alpha engine
+      * @param max uint which corresponds to entries in oracleList array.
+      */ 
+    function randomNum(uint max) private {
+        randomNumRequired = true;        
+        makeOraclizeQuery("Wolfram Alpha" ,strConcat("random number between 0 and ", bytes32ToString(uintToBytes(max))));
+    }
+       
+    
+    function callRandomNum (uint max) internal {
+        randomNum(max);
+    }
+
+
+    /** @dev Checks to see if a month (in seconds) has passed since the last lottery paid out, pays out if so    
+      */ 
+    function checkLottery() internal {       
+        if (block.timestamp > getNewMonth()) {
+            addMonth();
+            randomNum(oracles.getOracleListLength()-1);
         }
     }
 
-    /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
-       *  been cancelled, refunds all eth.               
-       * @param wagerId bytes32 wagerId of the wager to abort.  
-       */ 
-    function abortWager(bytes32 wagerId) external onlyOwner {
-        
-        address maker = wagers.getMaker(wagerId);
-        address taker = wagers.getTaker(wagerId);
-        wagers.setSettled(wagerId);
-        rewards.addUnlockedEth(maker, wagers.getOrigValue(wagerId));       
-        
-        if (taker != address(0)) {         
-            rewards.addUnlockedEth(taker, (mevu.getWinningValue(wagerId) - mevu.getOrigValue(wagerId)));
-        } 
-            
+       /** @dev Pays out the monthly lottery balance to a random oracle and sends the mevuWallet its accrued balance.   
+      */ 
+    function payoutLottery(address potentialWinner) private { 
+        // TODO: add functionality to test for oracle service being provided within one mointh of block.timestamp   
+        if (mvuToken.balanceOf(potentialWinner) > 0) {            
+            uint thisWin = lotteryBalance;
+            lotteryBalance = 0;
+            potentialWinner.transfer(thisWin);
+        } else {
+            if (oracles.getOracleListLength() >= admin.getMinOracleNum()) {
+                callRandomNum(oracles.getOracleListLength()-1);
+            }
+        }
+        mevuWallet.transfer(mevuBalance);
+        mevuBalance = 0;
     }
 
 
-     /** @dev Settle and facilitate payout of wagers needing oracle settlement.           
-      */ 
-    function oracleSettle() internal {
-     
-        for (uint a = 0; a < events.getActiveEventsLength(); a++) {
-            if (events.getVoteReady(a) && !events.getLocked(a)) {
-                if (events.getStandardEventOraclesLength(a) >= admin.getMinOracleNum()) { 
-                   // if (mevu.getStandardEventOracleVotesNum(a) >= mevu.getMinOracleNum()) {     
-                        //checkStakeEquity(a);
-                        updateEvent(a);                        
-                        oracleRewards(a); 
-                   // } else {
-                    //    oracleRedistribute(a);
-                   // }
-                } else {
-                    events.setEventWinner(a, 0);
-                    events.setEventLocked(a);
-                    oracleRefund(a);
-                } 
-            }
-        }                 
-        for (uint i = 0; i <  mevu.getOracleQueueLength(); i++){
-            uint thisEvent = mevu.getWagerEventId(mevu.getOracleQueueAt(i));      
-           
-            // Determine winner
-            if (mevu.getMakerChoice(mevu.getOracleQueueAt(i)) == mevu.getWinner(thisEvent)) {
-               mevu.setWagerWinner(mevu.getOracleQueueAt(i), mevu.getMaker(mevu.getOracleQueueAt(i)));
-                mevu.setWagerLoser(mevu.getOracleQueueAt(i), mevu.getTaker(mevu.getOracleQueueAt(i)));
-            } else {
-                if (mevu.getTakerChoice(mevu.getOracleQueueAt(i)) == mevu.getWinner(thisEvent)){ 
-                   mevu.setWagerWinner(mevu.getOracleQueueAt(i), mevu.getTaker(mevu.getOracleQueueAt(i)));
-                mevu.setWagerLoser(mevu.getOracleQueueAt(i), mevu.getMaker(mevu.getOracleQueueAt(i)));
-                } else {   
-                    // Tie or no clear winner
-                    mevu.setWagerWinner(mevu.getOracleQueueAt(i), address(0));
-                mevu.setWagerLoser(mevu.getOracleQueueAt(i), address(0));
-                }
-            }
-            // punish loser with bad rep for disagreeing         
-            // pay and reward winner with rep
-            playerRewards(mevu.getOracleQueueAt(i), thisEvent);
-        }     
-        //Set oracleQueue back to nothing to be re-filled tomorrow.
-        mevu.deleteOracleQueue();
-        
-    }     
-
-  
+   
     
     function pauseContract() 
-        external
-        onlyMevu {
+        public
+        onlyOwner {
         contractPaused = true;    
     }
 
-    function restartContract() 
+    function restartContract(uint secondsFromNow) 
         external 
-        onlyMevu {            
+        onlyOwner
+        payable
+    {            
         contractPaused = false;
-        bytes32 queryId = oraclize_query(Admin(adminContract).getCallbackInterval(), "URL", "", Admin(adminContract).getCallbackGasLimit());          
-        validIds[queryId] = true;      
+        oraclize_query(secondsFromNow, "URL", "");          
+          
     }     
 
-    function addToOracleList (address oracle) {
-        oracleList.push(oracle);
-    }
+   
 
     function addToOracleQueue (bytes32 wager) {
         oracleQueue.push(wager);
     }  
 
-    function getOracleQueueAt(uint index) returns (bytes32) {
+    function getOracleQueueAt(uint index) view returns (bytes32) {
         return oracleQueue[index];
     }
     
-    function getOracleQueueLength() returns (uint) {
+    function getOracleQueueLength() view returns (uint) {
         return oracleQueue.length;
     }    
 
@@ -773,11 +553,11 @@ contract Mevu is Ownable, usingOraclize {
         delete oracleQueue;
     }    
 
-    function addMevuBalance (uint amount) internal {
+    function addMevuBalance (uint amount) onlyAuth {
         mevuBalance += amount;
     }
 
-    function addLotteryBalance (uint amount) internal {
+    function addLotteryBalance (uint amount) onlyAuth {
         lotteryBalance += amount;
     }    
 
@@ -801,20 +581,54 @@ contract Mevu is Ownable, usingOraclize {
         recipient.transfer(amount);
     }   
   
-    function addMonth () onlyLottery {
+    function addMonth () internal {
         newMonth += monthSeconds;
-    }
-  
+    }  
    
     function getNewMonth () constant returns (uint256) {
         return newMonth;
     }
 
-    function makeOraclizeQuery (string engine, string query) onlyLottery {
-        oraclize_query (engine, query, Admin(adminContract).getCallbackGasLimit());
+    function makeOraclizeQuery (string engine, string query) internal {
+         bytes32 queryId =  oraclize_query (engine, query, admin.getCallbackGasLimit());
+        validIds[queryId] = true;          
+       
+    }
+
+    function uintToBytes(uint v) view returns (bytes32 ret) {
+        if (v == 0) {
+            ret = '0';
+        }
+        else {
+            while (v > 0) {
+                ret = bytes32(uint(ret) / (2 ** 8));
+                ret |= bytes32(((v % 10) + 48) * 2 ** (8 * 31));
+                v /= 10;
+            }
+        }
+        return ret;
+    }
+
+    function bytes32ToString (bytes32 data) view returns (string) {
+        bytes memory bytesString = new bytes(32);
+        for (uint j=0; j<32; j++) {
+            byte char = byte(bytes32(uint(data) * 2 ** (8 * j)));
+            if (char != 0) {
+                bytesString[j] = char;
+            }
+        }
+        return string(bytesString);
+    }
+
+    function addrToString(address x) returns (string) {
+        bytes memory b = new bytes(20);
+        for (uint i = 0; i < 20; i++)
+            b[i] = byte(uint8(uint(x) / (2**(8*(19 - i)))));
+        return string(b);
     } 
     
 } 
+
 
 
 

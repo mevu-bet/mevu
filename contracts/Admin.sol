@@ -5,11 +5,12 @@ import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
 contract Admin is Ownable {   
     
     uint minWagerAmount = 10;
-    uint callbackInterval = 250;
+    uint callbackInterval = 15;
     uint minOracleStake = 1;
     uint callbackGasLimit = 600000;
-    uint minOracleNum = 7;  
-  
+    uint minOracleNum = 7;
+
+   
 
    
 

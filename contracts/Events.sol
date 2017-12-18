@@ -1,10 +1,15 @@
 pragma solidity ^0.4.18; 
-
+import "./Oracles.sol";
+import "./Wagers.sol";
 import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract Events is Ownable {
     uint public eventsCount;
     bytes32[] public activeEvents;   
+    Oracles oracles;
+    Wagers wagers;
+    
+    address oraclesAddress;
 
     struct StandardWagerEvent {        
         bytes32 name;        
@@ -31,8 +36,34 @@ contract Events is Ownable {
     // Empty mappings to instantiate events   
     mapping (address => uint256) oracleStakes;
     address[] emptyAddrArray;
-    bytes32[] emptyBytes32Array;    
+    bytes32[] emptyBytes32Array;
 
+    modifier onlyOracles () {
+        require (msg.sender == oraclesAddress);
+        _;
+    }
+
+    
+    modifier onlyAuth () {
+        require(
+                msg.sender == address(owner) ||
+                msg.sender == address(oracles) ||
+                msg.sender == address(wagers));
+               
+                _;
+    }
+
+    function setWagersContract (address thisAddr) external onlyOwner {
+        wagers = Wagers(thisAddr);        
+    }
+
+
+    function setOraclesContract (address thisAddr) external onlyAuth {
+        oracles = Oracles(thisAddr);
+        oraclesAddress = thisAddr;
+    }    
+
+  
     /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
       * @param name The name of the event to be diplayed.
       * @param startTime The date and time the event begins in the YYYYMMDD9999 format.
@@ -51,7 +82,7 @@ contract Events is Ownable {
         bytes32 teamTwo
     )
         external
-        onlyOwner            
+        onlyAuth            
     {        
         StandardWagerEvent memory thisEvent;   
         thisEvent = StandardWagerEvent( name,
@@ -83,7 +114,7 @@ contract Events is Ownable {
         bytes32 newTeamTwo
     ) 
         external 
-        onlyOwner 
+        onlyAuth 
     {
         standardEvents[eventId].startTime = newStartTime;
         standardEvents[eventId].duration = newDuration;
@@ -92,7 +123,7 @@ contract Events is Ownable {
 
     }
 
-    function cancelStandardEvent (bytes32 eventId) external onlyOwner {
+    function cancelStandardEvent (bytes32 eventId) external onlyAuth {
         standardEvents[eventId].voteReady = true;
         standardEvents[eventId].locked = true;
         standardEvents[eventId].cancelled = true;
@@ -111,7 +142,7 @@ contract Events is Ownable {
 
      /** @dev loops through all events and sets an event to voteReady = true if it is over but not settled.      
       */
-    function voteReady() external onlyOwner {   
+    function voteReady() external onlyAuth {   
         uint blockTime = block.timestamp;
         uint eventEndTime;
         for (uint i = 0; i < activeEvents.length; i++){
@@ -126,36 +157,46 @@ contract Events is Ownable {
         }
     }
 
-    function addOracle (bytes32 eventId, address oracle, uint mvuStake) {
+    function addOracle (bytes32 eventId, address oracle, uint mvuStake) onlyOracles {
         standardEvents[eventId].oracles.push(oracle); 
         standardEvents[eventId].oracleStakes[oracle] = mvuStake;
         standardEvents[eventId].totalOracleStake += mvuStake;
         standardEvents[eventId].oracleVotes += 1;                          
-    }    
+    } 
 
-    function addOracleEarnings (bytes32 id, uint amount) external onlyOwner {
+    function removeEventFromActive (bytes32 eventId) external onlyAuth {
+        for (uint i = 0; i < activeEvents.length; i++) {
+            if (activeEvents[i] == eventId){
+                activeEvents[i] = activeEvents[activeEvents.length - 1];
+                delete activeEvents[activeEvents.length - 1];
+            }
+        }
+
+    }   
+
+    function addOracleEarnings (bytes32 id, uint amount) external onlyAuth {
         standardEvents[id].oracleEarnings += amount;
     }
 
-    function addWager(bytes32 eventId, bytes32 wagerId) external onlyOwner {
+    function addWager(bytes32 eventId, bytes32 wagerId) external onlyAuth {
         standardEvents[eventId].wagers.push(wagerId);
     }
 
-    function subTotalOracleStake (bytes32 eventId, uint amount) external onlyOwner {
+    function subTotalOracleStake (bytes32 eventId, uint amount) external onlyAuth {
         standardEvents[eventId].totalOracleStake -= amount;
         standardEvents[eventId].oracleVotes -= 1;
     }
 
-    function removeOracleFromEvent (bytes32 eventId, uint oracle) external onlyOwner {
+    function removeOracleFromEvent (bytes32 eventId, uint oracle) external onlyAuth {
         standardEvents[eventId].oracles[oracle] = standardEvents[eventId].oracles[standardEvents[eventId].oracles.length - 1];
         delete standardEvents[eventId].oracles[standardEvents[eventId].oracles.length - 1];
     }
 
-      function setEventWinner (bytes32 eventId, uint winner) external onlyOwner {
+      function setWinner (bytes32 eventId, uint winner) external onlyAuth {
         standardEvents[eventId].winner = winner;        
     }  
     
-    function setEventLocked (bytes32 eventId) external onlyOwner {
+    function setLocked (bytes32 eventId) external onlyAuth {
         standardEvents[eventId].locked = true;        
     }
 
@@ -163,8 +204,20 @@ contract Events is Ownable {
         standardEvents[eventId].oracleStakes[oracle] = stake;
     }
 
+    function getActiveEventId (uint i) external view returns (bytes32) {
+        return activeEvents[i];
+    }
+
+    function getActiveEventsLength () external view returns (uint) {
+        return activeEvents.length;
+    }
+
     function getOracleStakeAt (bytes32 eventId, address oracle) constant returns (uint) {
         return standardEvents[eventId].oracleStakes[oracle];
+    }
+
+    function getStandardEventCount () external view returns (uint) {
+        return eventsCount;
     }    
 
     function getStandardEventOraclesLength (bytes32 eventId) external view returns (uint) {
