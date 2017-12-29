@@ -245,15 +245,15 @@ contract Wagers is Ownable {
         wagersMap[wagerId].settled = true;
     }
 
-    function setMakerWinVote (bytes32 id, uint winnerVote) external onlyOwner {
+    function setMakerWinVote (bytes32 id, uint winnerVote) external onlyAuth {
         wagersMap[id].makerWinnerVote = winnerVote;
     }
 
-    function setTakerWinVote (bytes32 id, uint winnerVote) external onlyOwner {
+    function setTakerWinVote (bytes32 id, uint winnerVote) external onlyAuth {
         wagersMap[id].takerWinnerVote = winnerVote;
     }
 
-    function setRefund (address bettor, bytes32 wagerId) external onlyOwner {
+    function setRefund (address bettor, bytes32 wagerId) external onlyAuth {
         recdRefund[bettor][wagerId] = true;
     }
 

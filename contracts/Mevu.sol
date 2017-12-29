@@ -366,18 +366,19 @@ contract Mevu is Ownable, usingOraclize {
     function settle(bytes32 wagerId) internal {
         address maker = wagers.getMaker(wagerId);
         address taker = wagers.getMaker(wagerId);
+        uint origValue = wagers.getOrigValue(wagerId);
         if (wagers.getMakerWinVote(wagerId) == wagers.getTakerWinVote(wagerId)) {
             if (wagers.getMakerWinVote(wagerId) == wagers.getMakerChoice(wagerId)) {
                 wagers.setWinner(wagerId, maker);
-                rewards.addEth(maker, wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId));
-                rewards.subEth(taker, wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId));
+                rewards.addEth(maker, wagers.getWinningValue(wagerId) - origValue);
+                rewards.subEth(taker, wagers.getWinningValue(wagerId) - origValue);
             } else {
                 if (wagers.getMakerWinVote(wagerId) == 3) {
                     wagers.setWinner(wagerId, address(0));                    
                 } else {
                     wagers.setWinner(wagerId, taker);
-                    rewards.addEth(maker, wagers.getOrigValue(wagerId));
-                    rewards.subEth(taker, wagers.getOrigValue(wagerId));
+                    rewards.addEth(maker, origValue);
+                    rewards.subEth(taker, origValue);
                 }
             }
             payout(wagerId, maker, taker);
@@ -392,18 +393,24 @@ contract Mevu is Ownable, usingOraclize {
        * @param wagerId bytes32 id for the wager.         
        */
      function payout(bytes32 wagerId, address maker, address taker) internal {  
-         if (!wagers.getSettled(wagerId)){
+         if (!wagers.getSettled(wagerId)) {
             wagers.setSettled(wagerId);
-             if (wagers.getWinner(wagerId) == address(0)) { //Tie               
-                transferEthFromMevu(maker, wagers.getOrigValue(wagerId));
-                transferEthFromMevu(taker, wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId));     
+            uint origVal =  wagers.getOrigValue(wagerId);
+            uint winVal = wagers.getWinningValue(wagerId);
+             if (wagers.getWinner(wagerId) == address(0)) { //Tie
+                maker.transfer(origVal);
+                taker.transfer(winVal-origVal);               
+               // transferEthFromMevu(maker, wagers.getOrigValue(wagerId));
+                //transferEthFromMevu(taker, wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId));     
              } else {
                 uint payoutValue = wagers.getWinningValue(wagerId); 
                 uint fee = (payoutValue/100) * 2; // Sevice fee is 2 percent
-                addMevuBalance(3*(fee/4));
+                //addMevuBalance(3*(fee/4));
+                mevuBalance += (3*(fee/4));
                 rewards.subEth(wagers.getWinner(wagerId), payoutValue);
                 payoutValue -= fee;
-                addLotteryBalance(fee/8);
+                //addLotteryBalance(fee/8);
+                lotteryBalance += (fee/8);
                 uint oracleFee = fee/8;                         
                 transferEthFromMevu(wagers.getWinner(wagerId), payoutValue);  
                 events.addOracleEarnings(wagers.getEventId(wagerId), oracleFee);              
