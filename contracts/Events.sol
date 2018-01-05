@@ -5,7 +5,8 @@ import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract Events is Ownable {
     uint public eventsCount;
-    bytes32[] public activeEvents;   
+    bytes32[] public activeEvents;
+       
     Oracles oracles;
     Wagers wagers;
     
@@ -23,6 +24,7 @@ contract Events is Ownable {
         uint oracleEarnings;
         uint winner;
         uint loser;
+        uint activeEventIndex;
         bytes32[] wagers;        
         address[] oracles;       
         mapping (address => uint256) oracleStakes;
@@ -61,7 +63,12 @@ contract Events is Ownable {
     function setOraclesContract (address thisAddr) external onlyAuth {
         oracles = Oracles(thisAddr);
         oraclesAddress = thisAddr;
-    }    
+    } 
+
+    function Events () {
+        bytes32 empty;
+        activeEvents.push(empty);
+    }   
 
   
     /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
@@ -96,6 +103,7 @@ contract Events is Ownable {
                                         0,
                                         0,
                                         0,
+                                        activeEvents.length,
                                         emptyBytes32Array,
                                         emptyAddrArray,                                                                        
                                         false,                                      
@@ -127,20 +135,14 @@ contract Events is Ownable {
         standardEvents[eventId].voteReady = true;
         standardEvents[eventId].locked = true;
         standardEvents[eventId].cancelled = true;
-        uint index;
-        for (uint i = 0; i < activeEvents.length; i++) {
-            bytes32 thisEvent = activeEvents[i];
-            if (thisEvent == eventId) {
-                index = i;
-            }
-        }
+        uint indexToDelete standardEvents[eventId].activeEventsIndex;
         uint lastItem = activeEvents.length - 1;
-        activeEvents[index] = activeEvents[lastItem];
-        delete activeEvents[lastItem];
-
+        activeEvents[indexToDelete] = activeEvents[lastItem]; // Write over item to delete with last item
+        standardEvents[activeEvents[lastItem]].activeEventsIndex = indexToDelete; //Point what was the last item to its new spot in array      
+        activeEvents.length - ; // Delete what is now duplicate entry in last spot
     }
 
-     /** @dev loops through all events and sets an event to voteReady = true if it is over but not settled.      
+     /** @dev loops through all active events and sets an event to voteReady = true if it is over but not settled.      
       */
     function voteReady() external onlyAuth {   
         uint blockTime = block.timestamp;
@@ -164,14 +166,12 @@ contract Events is Ownable {
         standardEvents[eventId].oracleVotes += 1;                          
     } 
 
-    function removeEventFromActive (bytes32 eventId) external onlyAuth {
-        for (uint i = 0; i < activeEvents.length; i++) {
-            if (activeEvents[i] == eventId){
-                activeEvents[i] = activeEvents[activeEvents.length - 1];
-                delete activeEvents[activeEvents.length - 1];
-            }
-        }
-
+    function removeEventFromActive (bytes32 eventId) external onlyAuth { 
+        uint indexToDelete standardEvents[eventId].activeEventsIndex;
+        uint lastItem = activeEvents.length - 1;
+        activeEvents[indexToDelete] = activeEvents[lastItem]; // Write over item to delete with last item
+        standardEvents[activeEvents[lastItem]].activeEventsIndex = indexToDelete; //Point what was the last item to its new spot in array      
+        activeEvents.length - ; // Delete what is now duplicate entry in last spot
     }   
 
     function addOracleEarnings (bytes32 id, uint amount) external onlyAuth {
