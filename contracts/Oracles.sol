@@ -18,6 +18,7 @@ contract Oracles is Ownable {
     uint oracleServiceFee = 3; //Percent
 
     mapping (bytes32 => mapping(address => bool)) rewardClaimed;
+    mapping (address => bool) private isAuthorized;
   
 
     modifier eventUnlocked(bytes32 eventId){
@@ -46,10 +47,11 @@ contract Oracles is Ownable {
     }  
 
      modifier onlyAuth () {
-        require(msg.sender == address(admin) ||                  
-                msg.sender == address(wagers));
+        require(isAuthorized[msg.sender]);               
                 _;
     }
+
+    
 
     modifier onlyOracle (bytes32 eventId) {
         require (events.checkOracleStatus(msg.sender, eventId));
@@ -80,6 +82,14 @@ contract Oracles is Ownable {
     address[] correctOracles;
     bytes32[] correctStructs;    
     
+    function grantAuthority (address nowAuthorized) onlyOwner {
+        isAuthorized[nowAuthorized] = true;
+    }
+
+    function removeAuthority (address unauthorized) onlyOwner {
+        isAuthorized[unauthorized] = false;
+    }
+
     function setEventsContract (address thisAddr) external onlyOwner {
         events = Events(thisAddr);        
     }
@@ -347,7 +357,7 @@ contract Oracles is Ownable {
             
         }
 
-        
+
 
     }
 

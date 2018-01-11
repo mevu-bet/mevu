@@ -48,12 +48,16 @@ contract Events is Ownable {
     bytes32[] emptyBytes32Array;
  
     modifier onlyAuth () {
-        require(isAuthorized(msg.sender));               
+        require(isAuthorized[msg.sender]);               
                 _;
     }
 
-    function giveAuthority (address nowAuthorized) onlyOwner {
-        isAuthorized(nowAuthorized) = true;
+    function grantAuthority (address nowAuthorized) onlyOwner {
+        isAuthorized[nowAuthorized] = true;
+    }
+
+    function removeAuthority (address unauthorized) onlyOwner {
+        isAuthorized[unauthorized] = false;
     }
 
     function setWagersContract (address thisAddr) external onlyOwner {

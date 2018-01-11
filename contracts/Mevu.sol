@@ -35,6 +35,7 @@ contract Mevu is Ownable, usingOraclize {
        
     mapping (bytes32 => bool) validIds;
     mapping (address => bool) abandoned;
+    mapping (address => bool) private isAuthorized;
     //bytes32[] oracleQueue;  
     
 
@@ -56,13 +57,12 @@ contract Mevu is Ownable, usingOraclize {
         _;
     }
 
-    modifier onlyAuth () {
-        require(msg.sender == address(admin) ||
-                msg.sender == address(this.owner)||
-                msg.sender == address(this) ||                
-                msg.sender == address(wagers));
+     modifier onlyAuth () {
+        require(isAuthorized[msg.sender]);               
                 _;
     }
+
+   
 
       
     
@@ -126,6 +126,14 @@ contract Mevu is Ownable, usingOraclize {
         //bytes32 queryId = oraclize_query(100, "URL", "", oraclizeGasLimit);
         //validIds[queryId] = true;          
   
+    }
+
+    function grantAuthority (address nowAuthorized) onlyOwner {
+        isAuthorized[nowAuthorized] = true;
+    }
+
+    function removeAuthority (address unauthorized) onlyOwner {
+        isAuthorized[unauthorized] = false;
     }
 
     function setEventsContract (address thisAddr) external onlyOwner {

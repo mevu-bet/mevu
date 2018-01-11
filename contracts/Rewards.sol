@@ -5,7 +5,8 @@ import "./Admin.sol";
 import "./Wagers.sol";
 
 import "./Oracles.sol";
-contract Rewards is Ownable {  
+contract Rewards is Ownable {
+    mapping (address => bool) private isAuthorized;  
     Admin admin;
     Wagers wagers;
     Oracles oracles;
@@ -18,11 +19,16 @@ contract Rewards is Ownable {
 
 
     modifier onlyAuth () {
-        require(msg.sender == address(admin) ||
-                msg.sender == address(this.owner)||
-                msg.sender == address(oracles) ||
-                msg.sender == address(wagers));
+        require(isAuthorized[msg.sender]);               
                 _;
+    }
+
+    function grantAuthority (address nowAuthorized) onlyOwner {
+        isAuthorized[nowAuthorized] = true;
+    }
+
+    function removeAuthority (address unauthorized) onlyOwner {
+        isAuthorized[unauthorized] = false;
     }
 
     function setOraclesContract (address thisAddr) external onlyOwner {
