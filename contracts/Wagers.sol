@@ -76,6 +76,11 @@ contract Wagers is Ownable {
         _;
     }
 
+    modifier notMade(bytes32 wagerId) {
+        require (wagersMap[wagerId].value == 0);
+        _;
+    }
+
     modifier onlyBettor (bytes32 wagerId) {
         require (msg.sender == getMaker(wagerId) || msg.sender == getTaker(wagerId));
         _;
@@ -86,7 +91,7 @@ contract Wagers is Ownable {
         _;
     }     
 
-    function setRewardsContract   (address thisAddr) external onlyOwner {
+    function setRewardsContract (address thisAddr) external onlyOwner {
         rewards = Rewards(thisAddr);
     }
 
@@ -122,6 +127,7 @@ contract Wagers is Ownable {
         uint odds,
         uint makerChoice
     )
+        notMade(wagerId)
         eventUnlocked(eventId)
         requireMinWager
         checkBalance(value)
@@ -154,13 +160,14 @@ contract Wagers is Ownable {
                             false,
                             false);
         transferEthToMevu(msg.value);
+        mevu.addToPlayerFunds(msg.value);
         wagersMap[wagerId] = thisWager;     
         events.addWager(eventId, wagerId);
         rewards.addEth(msg.sender, msg.value);       
         rewards.subUnlockedEth(msg.sender, (value - msg.value));     
     }
 
-         /** @dev Takes a listed wager for a user -- adds address to StandardWager struct.
+     /** @dev Takes a listed wager for a user -- adds address to StandardWager struct.
       * @param id sha3 hash of the msg.sender concat timestamp.         
       */
     function takeWager (
@@ -175,14 +182,13 @@ contract Wagers is Ownable {
         require (rewards.getUnlockedEthBalance(msg.sender) + msg.value >= expectedValue);
         address taker = msg.sender;
         transferEthToMevu(msg.value);
+        mevu.addToPlayerFunds(msg.value);
         rewards.subUnlockedEth(msg.sender, (expectedValue - msg.value));        
-        rewards.addEth(msg.sender, msg.value);
-        
+        rewards.addEth(msg.sender, msg.value);        
         wagersMap[id].taker = taker;
         wagersMap[id].locked = true; 
         wagersMap[id].winningValue = wagersMap[id].origValue + expectedValue;
-        
-      
+        events.addWager(getEventId(wagerId), winningValue);     
                       
     }    
 
@@ -211,7 +217,8 @@ contract Wagers is Ownable {
     {       
         if (msg.sender == getTaker(wagerId)) {
             if (getMakerCancelRequest(wagerId)) {            
-                setSettled(wagerId);                
+                setSettled(wagerId);
+                events.removeWager(wagers.getEventId(wagerId), wagers.getWinningValue(wagerId));                
                 rewards.addUnlockedEth(getMaker(wagerId), getOrigValue(wagerId)); 
                 rewards.addUnlockedEth(getTaker(wagerId),  (getWinningValue(wagerId) - getOrigValue(wagerId)));
             } else {
@@ -220,7 +227,8 @@ contract Wagers is Ownable {
         }
         if (msg.sender ==  getMaker(wagerId)) {
             if (getTakerCancelRequest(wagerId)) {            
-                setSettled(wagerId);              
+                setSettled(wagerId);
+                events.removeWager(wagers.getEventId(wagerId),wagers.getWinningValue(wagerId));              
                 rewards.addUnlockedEth(getMaker(wagerId), getOrigValue(wagerId));
                 rewards.addUnlockedEth(getTaker(wagerId),  (getWinningValue(wagerId) - getOrigValue(wagerId)));
             } else {

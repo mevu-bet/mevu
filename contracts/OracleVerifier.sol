@@ -24,7 +24,7 @@ contract OracleVerifier is Ownable {
       * @param phoneNumber - ten digit phone number belonging to Oracle which has already been verified.
       */
     function addVerifiedOracle(address newOracle, bytes32 phoneNumber) onlyOwner {
-        bytes32 phoneHash = sha3(phoneNumber);
+        bytes32 phoneHash = keccak256(phoneNumber);
         if (verified[newOracle]) {
             revert();
         } else {

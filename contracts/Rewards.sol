@@ -9,7 +9,7 @@ contract Rewards is Ownable {
     Admin admin;
     Wagers wagers;
     Oracles oracles;
-    mapping(address => uint) public playerRep;
+    mapping(address => int) public playerRep;
     mapping (address => uint) public oracleRep;  
     mapping (address => uint) public ethBalance;
     mapping (address => uint) public mvuBalance;
