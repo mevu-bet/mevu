@@ -11,6 +11,7 @@ contract Events is Ownable {
        
     Oracles oracles;
     Wagers wagers;
+    Admin admin;
     
     address oraclesAddress;
 
@@ -40,7 +41,7 @@ contract Events is Ownable {
         bool cancelled;
     }
 
-    mapping (bytes32 => StandardWagerEvent) public standardEvents;
+    mapping (bytes32 => StandardWagerEvent) standardEvents;
     
     // Empty mappings to instantiate events   
     mapping (address => uint256) oracleStakes;
@@ -66,6 +67,10 @@ contract Events is Ownable {
 
     function setOraclesContract (address thisAddr) external onlyAuth {
         oracles = Oracles(thisAddr);        
+    } 
+
+    function setAdminContract (address thisAddr) external onlyAuth {
+        admin = Admin(thisAddr);        
     } 
 
     function Events () {
@@ -114,6 +119,9 @@ contract Events is Ownable {
                                         0,
                                         0,
                                         0,
+                                        0,
+                                        0,
+                                        0,
                                         activeEvents.length,
                                         emptyBytes32Array,
                                         emptyAddrArray,                                                                        
@@ -146,11 +154,11 @@ contract Events is Ownable {
         standardEvents[eventId].voteReady = true;
         standardEvents[eventId].locked = true;
         standardEvents[eventId].cancelled = true;
-        uint indexToDelete = standardEvents[eventId].activeEventsIndex;
+        uint indexToDelete = standardEvents[eventId].activeEventIndex;
         uint lastItem = activeEvents.length - 1;
         activeEvents[indexToDelete] = activeEvents[lastItem]; // Write over item to delete with last item
-        standardEvents[activeEvents[lastItem]].activeEventsIndex = indexToDelete; //Point what was the last item to its new spot in array      
-        activeEvents.length - ; // Delete what is now duplicate entry in last spot
+        standardEvents[activeEvents[lastItem]].activeEventIndex = indexToDelete; //Point what was the last item to its new spot in array      
+        activeEvents.length -- ; // Delete what is now duplicate entry in last spot
     }
 
      /** @dev loops through all active events and sets an event to voteReady = true if it is over but not settled.      
@@ -172,16 +180,37 @@ contract Events is Ownable {
 
     function determineEventStage (bytes32 thisEventId, uint lastIndex) onlyAuth {
         require (!getLocked(thisEventId));
-        if (blockTime > eventEndTime){
+        uint eventEndTime = getStart(thisEventId) + getDuration(thisEventId);
+        if (block.timestamp > eventEndTime){
             // Event is over
             if (this.getVoteReady(thisEventId) == false){
                 makeVoteReady(thisEventId);
             } else {
                 // Go through next active event in array and finalize winners with voteReady events
-                oracles.decideWinner(thisEventId);
+                decideWinner(thisEventId);
                 setLocked(thisEventId);
-                removeFromActive(thisEventId)
+                removeEventFromActive(thisEventId);
             } 
+        }
+    }
+
+    function decideWinner (bytes32 eventId) internal {
+        require (getOracleVotesNum(eventId) >= admin.getMinOracleNum());
+        uint teamOneCount = standardEvents[eventId].oVotesForOne;
+        uint teamTwoCount = standardEvents[eventId].oVotesForTwo;
+        uint tieCount = standardEvents[eventId].oVotesForThree;    
+        if (teamOneCount > teamTwoCount && teamOneCount > tieCount){
+           setWinner(eventId, 1);
+        } else {
+            if (teamTwoCount > teamOneCount && teamTwoCount > tieCount){
+            setWinner(eventId, 2);
+            } else {
+                if (tieCount > teamTwoCount && tieCount > teamOneCount){
+                    setWinner(eventId, 3);// Tie
+                } else {
+                    setWinner(eventId, 0); // No clear winner
+                }
+            }
         }
     }
 
@@ -202,21 +231,17 @@ contract Events is Ownable {
     } 
 
     function removeEventFromActive (bytes32 eventId) onlyAuth { 
-        uint indexToDelete standardEvents[eventId].activeEventsIndex;
+        uint indexToDelete = standardEvents[eventId].activeEventIndex;
         uint lastItem = activeEvents.length - 1;
         activeEvents[indexToDelete] = activeEvents[lastItem]; // Write over item to delete with last item
-        standardEvents[activeEvents[lastItem]].activeEventsIndex = indexToDelete; //Point what was the last item to its new spot in array      
-        activeEvents.length - ; // Delete what is now duplicate entry in last spot
+        standardEvents[activeEvents[lastItem]].activeEventIndex = indexToDelete; //Point what was the last item to its new spot in array      
+        activeEvents.length -- ; // Delete what is now duplicate entry in last spot
     }
 
     function removeWager (bytes32 eventId, uint value) external onlyAuth {
         standardEvents[eventId].numWagers --;
         standardEvents[eventId].totalAmountBet -= value;
     }   
-
-    function addOracleEarnings (bytes32 id, uint amount) external onlyAuth {
-        standardEvents[id].oracleEarnings += amount;
-    }
 
     function addWager(bytes32 eventId, uint value) external onlyAuth {      
         standardEvents[eventId].numWagers ++;
@@ -233,11 +258,11 @@ contract Events is Ownable {
         delete standardEvents[eventId].oracles[standardEvents[eventId].oracles.length - 1];
     }
 
-    function setWinner (bytes32 eventId, uint winner) external onlyAuth {
+    function setWinner (bytes32 eventId, uint winner) onlyAuth {
         standardEvents[eventId].winner = winner;        
     }  
     
-    function setLocked (bytes32 eventId) external onlyAuth {
+    function setLocked (bytes32 eventId) onlyAuth {
         standardEvents[eventId].locked = true;        
     }
 
@@ -273,7 +298,7 @@ contract Events is Ownable {
         return standardEvents[eventId].oracles.length;
     }
     
-    function getStandardEventOracleVotesNum (bytes32 eventId) external view returns (uint) {
+    function getOracleVotesNum (bytes32 eventId) view returns (uint) {
         return standardEvents[eventId].oracleVotes;
     }
 
@@ -281,12 +306,17 @@ contract Events is Ownable {
         return standardEvents[eventId].oracles[index];
     }
 
-    function getOracleEarnings (bytes32 eventId) external view returns (uint) {
-        return standardEvents[eventId].oracleEarnings;
-    }
-
     function getTotalOracleStake (bytes32 eventId) external view returns (uint256) {
         return standardEvents[eventId].totalOracleStake;
+    }
+
+    function getTotalAmountBet (bytes32 eventId) view returns (uint) {
+        return standardEvents[eventId].totalAmountBet;
+    }
+
+    function getTotalAmountResolvedWithoutOracles (bytes32 eventId) view returns (uint) {
+        return standardEvents[eventId].totalAmountResolvedWithoutOracles;
+
     }
 
 
@@ -294,15 +324,15 @@ contract Events is Ownable {
         return standardEvents[id].cancelled;
     }
 
-    function getStart (bytes32 id) external view returns (uint) {
+    function getStart (bytes32 id) view returns (uint) {
         return standardEvents[id].startTime;
     }
 
-    function getDuration (bytes32 id) external view returns (uint) {
+    function getDuration (bytes32 id) view returns (uint) {
         return standardEvents[id].duration;
     }
 
-    function getLocked(bytes32 id) external view returns (bool) {
+    function getLocked(bytes32 id) view returns (bool) {
         return standardEvents[id].locked;
     }
 

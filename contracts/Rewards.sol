@@ -1,22 +1,20 @@
 pragma solidity 0.4.18;
-
 import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Admin.sol";
 import "./Wagers.sol";
-
 import "./Oracles.sol";
+
 contract Rewards is Ownable {
     mapping (address => bool) private isAuthorized;  
     Admin admin;
     Wagers wagers;
     Oracles oracles;
     mapping(address => int) public playerRep;
-    mapping (address => uint) public oracleRep;  
+    mapping (address => int) public oracleRep;  
     mapping (address => uint) public ethBalance;
     mapping (address => uint) public mvuBalance;
     mapping(address => uint) public unlockedEthBalance;
     mapping (address => uint) public unlockedMvuBalance;
-
 
     modifier onlyAuth () {
         require(isAuthorized[msg.sender]);               
@@ -42,7 +40,6 @@ contract Rewards is Ownable {
     function setWagersContract (address thisAddr) external onlyOwner {
         wagers = Wagers(thisAddr);        
     }
-
    
     function getEthBalance(address user) external view returns (uint) {
         return ethBalance[user];
@@ -92,19 +89,19 @@ contract Rewards is Ownable {
         unlockedEthBalance[user] += amount;
     }
     
-    function subOracleRep(address oracle, uint value) external onlyAuth {
+    function subOracleRep(address oracle, int value) external onlyAuth {
         oracleRep[oracle] -= value;
     }
 
-    function subPlayerRep(address player, uint value) external onlyAuth {
+    function subPlayerRep(address player, int value) external onlyAuth {
         playerRep[player] -= value;
     }
 
-    function addOracleRep(address oracle, uint value) external onlyAuth {
+    function addOracleRep(address oracle, int value) external onlyAuth {
         oracleRep[oracle] += value;
     }
 
-    function addPlayerRep(address player, uint value) external onlyAuth {
+    function addPlayerRep(address player, int value) external onlyAuth {
         playerRep[player] += value;
     }
 } 

@@ -7,6 +7,10 @@ import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract Wagers is Ownable {
 
+    Events events;
+    Rewards rewards;
+    Mevu mevu;
+
     struct Wager {
         bytes32 eventId;        
         uint origValue;
@@ -35,51 +39,7 @@ contract Wagers is Ownable {
                 _;
     }  
         
-    modifier eventUnlocked(bytes32 eventId){
-        require (!events.getLocked(eventId));
-        _;
-    }
-
-    modifier wagerUnlocked (bytes32 wagerId) {
-        require (!getLocked(wagerId));
-        _;
-    }    
-
-    modifier mustBeTaken (bytes32 wagerId) {
-        require (getTaker(wagerId) != address(0));
-        _;
-    }
-
-    modifier notSettled(bytes32 wagerId) {
-        require (!getSettled(wagerId));
-        _;           
-    }  
-
-    modifier checkBalance (uint wagerValue) {
-        require (rewards.getUnlockedEthBalance(msg.sender) + msg.value >= wagerValue);
-        _;
-    }      
-    
-    modifier notPaused() {
-        require (!mevu.getContractPaused());
-        _;
-    }
-
-    modifier notMade(bytes32 wagerId) {
-        require (wagersMap[wagerId].value == 0);
-        _;
-    }
-
-    modifier onlyBettor (bytes32 wagerId) {
-        require (msg.sender == getMaker(wagerId) || msg.sender == getTaker(wagerId));
-        _;
-    }
-
-    modifier notTaken (bytes32 wagerId) {
-        require (getTaker(wagerId) == address(0));
-        _;
-    } 
-
+   
     function grantAuthority (address nowAuthorized) external onlyOwner {
         isAuthorized[nowAuthorized] = true;
     }
@@ -88,7 +48,8 @@ contract Wagers is Ownable {
         isAuthorized[unauthorized] = false;
     } 
 
-    function makeWager ( 
+    function makeWager (
+        bytes32 wagerId, 
         bytes32 eventId,        
         uint origValue,
         uint winningValue,        
@@ -161,23 +122,27 @@ contract Wagers is Ownable {
         wagersMap[id].loser = loser;
     }
 
+    function setWinningValue (bytes32 wagerId, uint value) external onlyAuth {
+        wagersMap[wagerId].winningValue = value;
+    }
+
     function getEventId(bytes32 wagerId) external view returns (bytes32) {
         return wagersMap[wagerId].eventId;
     }
 
-    function getLocked (bytes32 id) external view returns (bool) {
+    function getLocked (bytes32 id)  view returns (bool) {
         return wagersMap[id].locked;
     }
 
-    function getSettled (bytes32 id) external view returns (bool) {
+    function getSettled (bytes32 id)  view returns (bool) {
         return wagersMap[id].settled;
     }
 
-    function getMaker(bytes32 id) external view returns (address) {
+    function getMaker(bytes32 id)  view returns (address) {
         return wagersMap[id].maker;
     }
 
-    function getTaker(bytes32 id) external view returns (address) {
+    function getTaker(bytes32 id)  view returns (address) {
         return wagersMap[id].taker;
     }
 

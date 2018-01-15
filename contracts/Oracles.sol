@@ -8,62 +8,21 @@ import "./Wagers.sol";
 import "./Mevu.sol";
 
 contract Oracles is Ownable {
-    Events events;
-    OracleVerifier oracleVerif;
-    Rewards rewards;
-    Admin admin;
-    Wagers wagers;
-    MvuToken mvuToken;
-    Mevu mevu;
+    // Events events;
+    // OracleVerifier oracleVerif;
+    // Rewards rewards;
+    // Admin admin;
+    // Wagers wagers;
+    // MvuToken mvuToken;
+    // Mevu mevu;
     uint oracleServiceFee = 3; //Percent
+    mapping (address => mapping(bytes32 => bool)) rewardClaimed;
+    mapping (address => bool) private isAuthorized;     
 
-    mapping (bytes32 => mapping(address => bool)) rewardClaimed;
-    mapping (address => bool) private isAuthorized;
-  
-
-    modifier eventUnlocked(bytes32 eventId){
-        require (!events.getLocked(eventId));
-        _;
-    }
-
-    modifier eventLocked (bytes32 eventId){
-        require (events.getLocked(eventId));
-        _;
-    }
-
-    modifier onlyVerified() {
-        require (oracleVerif.checkVerification(msg.sender));
-        _;
-    }
-
-    modifier mustBeVoteReady(bytes32 eventId) {
-        require (events.getVoteReady(eventId));
-        _;           
-    }
-
-    modifier notClaimed () {
-        require (!rewardClaimed[eventId][msg.sender]);
-        _;
-    }  
-
-     modifier onlyAuth () {
+    modifier onlyAuth () {
         require(isAuthorized[msg.sender]);               
                 _;
-    }
-
-    
-
-    modifier onlyOracle (bytes32 eventId) {
-        require (events.checkOracleStatus(msg.sender, eventId));
-        _;
-    }
-
-
-    
-     
-
-    
-
+    }  
 
     struct OracleStruct { 
         bytes32 eventId;
@@ -71,14 +30,12 @@ contract Oracles is Ownable {
         uint winnerVote;
         bool paid;
     }
-    mapping (address => mapping (bytes32 => OracleStruct)) oracleStructs;
-
     
+    mapping (address => mapping (bytes32 => OracleStruct)) oracleStructs;    
     mapping (address => bytes32) lastEventOraclized;
     //mapping(address => bytes32[])  oracles;
     //mapping(bytes32 => OracleStruct) oracleStructs;   
-    address[]  oracleList; // List of people who have ever registered as an oracle
-    
+    address[] oracleList; // List of people who have ever registered as an oracle    
     address[] correctOracles;
     bytes32[] correctStructs;    
     
@@ -90,77 +47,22 @@ contract Oracles is Ownable {
         isAuthorized[unauthorized] = false;
     }
 
-    function setEventsContract (address thisAddr) external onlyOwner {
-        events = Events(thisAddr);        
-    }
+  
 
-    function setOracleVerifContract (address thisAddr) external onlyOwner {
-        oracleVerif  = OracleVerifier(thisAddr);
-    }
-
-    function setRewardsContract   (address thisAddr) external onlyOwner {
-        rewards = Rewards(thisAddr);
-    }
-
-    function setAdminContract (address thisAddr) external onlyOwner {
-        admin = Admin(thisAddr);
-    }
-
-    function setMvuTokenContract (address thisAddr) external onlyOwner {
-        mvuToken = MvuToken(thisAddr);
-    }
-
-    function setMevuContract (address thisAddr) external onlyOwner {
-        mevu = Mevu(thisAddr);
-    }
-
-
-    function removeOracle (address oracle, bytes32 eventId, bytes32 oracleId) onlyOwner {
+    function removeOracle (address oracle, bytes32 eventId) onlyAuth {
         OracleStruct memory thisOracle;
         bytes32 empty;         
         thisOracle = OracleStruct (empty,0,0, false);               
-        oracleStructs[oracleId] = thisOracle;    
+        oracleStructs[oracle][eventId] = thisOracle;    
     }
 
-  
+    function addOracle (bytes32 eventId, uint mvuStake, uint winnerVote) onlyAuth {
+        OracleStruct memory thisOracle; 
+        thisOracle = OracleStruct (eventId, mvuStake, winnerVote, false);      
+        oracleStructs[msg.sender][eventId] = thisOracle;
+    }
 
-    //  /** @dev Registers a user as an Oracle for the chosen event. Before being able to register the user must
-    //   * allow the contract to move their MVU through the Token contract.      
-    //   * @param oracleId bytes32 id for the oracle mapping to get struct with info.            
-    //   * @param eventId int id for the standard event the oracle is registered for.
-    //   * @param mvuStake Amount of mvu (in lowest base unit) staked.         
-    //   */
-      function registerOracle (        
-      bytes32 oracleId,
-      bytes32 eventId,
-      uint mvuStake,
-      uint winnerVote
-      ) 
-          eventUnlocked(eventId) 
-          onlyVerified          
-          mustBeVoteReady(eventId) 
-      {
-          //require (keccak256(strConcat(addrToString(msg.sender),  bytes32ToString(eventId))) == oracleId);       
-          require(mvuStake >= admin.getMinOracleStake());
-          require(winnerVote == 1 || winnerVote == 2 || winnerVote == 3); 
-           
-        bytes32 empty;
-          if (lastEventOraclized[msg.sender] == empty) {
-                addToOracleList(msg.sender);                
-          }
-          lastEventOraclized[msg.sender] = eventId;
-          transferTokensToOwner(msg.sender, mvuStake);
     
-        if (getMvuStake(oracleId) == 0) {       
-            OracleStruct memory thisOracle; 
-            thisOracle = OracleStruct (eventId, mvuStake, winnerVote, false);
-            oracles[msg.sender].push(oracleId);
-            oracleStructs[msg.sender][eventId] = thisOracle;
-            rewards.addMvu(msg.sender, mvuStake);
-            events.addOracle(eventId, msg.sender, mvuStake);
-        }   
-              
-    }
 
     
     // /** @dev Pay winners of wagers and alter rep of winners and losers, refund both if winner = 0
@@ -336,34 +238,7 @@ contract Oracles is Ownable {
           
     // }
 
-    function claimReward (bytes32 eventId )
-        onlyOracle(eventId)
-        notClaimed(eventId)
-        eventLocked(eventId)
-    {
-        rewardClaimed[eventId][msg.sender] = true;
-        uint ethReward;
-        uint mvuReward;
-        uint twoPercentRewardPool = 2 * events.getTotalAmountResolvedWithoutOracles(eventId)/100;
-        uint threePercentRewardPool = 3 * (events.getTotalAmountBet(eventId) - events.getTotalAmountResolvedWithoutOracles(eventId))/100;
-        uint totalRewardPool = (threePercentRewardPool/12) + (threePercentRewardPool/3) + (twoPercentRewardPool/8);
-        uint stakePercentageTimesTen = 1000 * getMvuStake(eventId, msg.sender);
-        stakePercentageTimesTen /= events.getTotalOracleStake(eventId);
-
-        if (getWinnerVote(eventId, msg.sender) == events.getWinner(eventId)) {
-            ethReward = (totalRewardPool/1000) * stakePercentageTimesTen;
-            rewards.addUnlockedEth(msg.sender, ethReward);             
-            rewards.addEth(msg.sender, ethReward);
-            
-        }
-
-
-
-    }
-
-    function claimRefund () {
-
-    }
+   
     
 
      /** @dev Refunds all oracles registered to an event since not enough have registered to vote on the outcome at time of settlement
@@ -386,20 +261,7 @@ contract Oracles is Ownable {
     //         }
     //     }
     // }
-    /** @dev looks at the current oracle votes of a requested event and assigns a winner
-     */
-    function decideWinner (bytes32 eventId) {
-        require (events.getStandardEventOracleVotesNum() >= admin.getMinOracleNum());
-        uint teamOneVotes = events.getTeamOneVotes();
-        uint teamTwoVotes = events.getTeamTwoVotes();
-        if (teamOneVotes > teamTwoVotes) {
-            events.setWinner(eventId, 1);
-        }
-        if (teamTwoVotes > teamOneVotes) {
-            events.setWinner(eventId, 2);
-        }
-
-    }
+   
 
 
 
@@ -446,13 +308,9 @@ contract Oracles is Ownable {
 
     
 
-    function addToOracleList (address oracle) internal {
+    function addToOracleList (address oracle) onlyAuth {
         oracleList.push(oracle);
-    }
-
-    function transferTokensToOwner (address oracle, uint mvuStake) internal {
-        mvuToken.transferFrom(oracle, address(this.owner), mvuStake);       
-    }
+    }  
   
 
     
@@ -460,36 +318,27 @@ contract Oracles is Ownable {
     //     oracleStructs[id].paid = true;
     // }
     
+    function setRewardClaimed (address oracle, bytes32 eventId) onlyAuth {
+        rewardClaimed[oracle][eventId] = true;
+    }
+
+    function setLastEventOraclized (address oracle, bytes32 eventId) onlyAuth {
+        lastEventOraclized[oracle] = eventId;
+    }
 
     function getWinnerVote(bytes32 eventId, address oracle)  view returns (uint) {
         return oracleStructs[oracle][eventId].winnerVote;
     }
 
-    function getPaid (bytes32 id)  view returns (bool) {
-        return oracleStructs[id].paid;
+    function getPaid (bytes32 eventId, address oracle)  view returns (bool) {
+        return oracleStructs[oracle][eventId].paid;
     }
-
-    function getEventId(bytes32 oracleId)  view returns (bytes32) {
-        return oracleStructs[oracleId].eventId;
-    }
+   
 
     function getMvuStake (bytes32 eventId, address oracle) view returns (uint) {
         return oracleStructs[oracle][eventId].mvuStake;
-    }
-
-   
-
-    
-    
-    function getOracleAt (address oracle, uint index)  view returns (bytes32) {
-        return oracles[oracle][index];
-    }   
-     
-     function getOracleLength(address oracle)  view returns (uint) {
-         bytes32[] memory thisOracle = oracles[oracle];
-         return thisOracle.length;
-    }
-
+    }    
+ 
     function getOracleListLength()  view returns (uint) {
         return oracleList.length;
     }
@@ -497,6 +346,14 @@ contract Oracles is Ownable {
     function getOracleListAt (uint index)  view returns (address) {
         return oracleList[index];
     }
-  
+
+    function getLastEventOraclized (address oracle) view returns (bytes32) {
+        return lastEventOraclized[oracle];
+    }  
+
+    function getRewardClaimed (address oracle, bytes32 eventId) view returns (bool) {
+        return rewardClaimed[oracle][eventId];
+
+    }
 
 }

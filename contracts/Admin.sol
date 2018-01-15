@@ -9,9 +9,6 @@ contract Admin is Ownable {
     uint minOracleStake = 1;
     uint callbackGasLimit = 600000;
     uint minOracleNum = 7;
-
-   
-
    
 
     function setMinOracleStake (uint newMin) external onlyOwner {
@@ -20,9 +17,7 @@ contract Admin is Ownable {
 
     function setCallbackGasLimit (uint newLimit) external onlyOwner {
         callbackGasLimit = newLimit;
-    }
-
-    
+    }    
     
     /** @dev Sets a new number for the interval in between callback functions.
       * @param newInterval The new interval between oraclize callbacks.        
@@ -37,7 +32,6 @@ contract Admin is Ownable {
     function setMinWagerAmount(uint256 minWager) external onlyOwner {
         minWagerAmount = minWager;
     }  
-
     
     function getCallbackInterval() external view returns (uint) {
        return callbackInterval;

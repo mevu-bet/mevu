@@ -23,7 +23,8 @@ contract Mevu is Ownable, usingOraclize {
     MvuToken mvuToken;
     bool  contractPaused = false;
     bool  randomNumRequired = false;
-    bool settlementPeriod = false;  
+    bool settlementPeriod = false;
+    uint lastIteratedIndex = 0;  
     uint  mevuBalance = 0;
     uint  lotteryBalance = 0;    
     uint oraclizeGasLimit = 500000;
@@ -114,7 +115,7 @@ contract Mevu is Ownable, usingOraclize {
 
     // Constructor 
     function Mevu () payable { 
-        OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);               
+        //OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);               
         mevuWallet = msg.sender;        
         //bytes32 queryId = oraclize_query(100, "URL", "", oraclizeGasLimit);
         //validIds[queryId] = true;          
@@ -170,16 +171,17 @@ contract Mevu is Ownable, usingOraclize {
         } else {            
 
             events.determineEventStage(events.getActiveEventId(lastIteratedIndex), lastIteratedIndex);
-            lastIteratedIndex ++;          
+            lastIteratedIndex ++;       
+            bytes32 queryId;   
             
             if (lastIteratedIndex == events.getActiveEventsLength()) {               
                 lastIteratedIndex = 0;
                 checkLottery();
                 newOraclizeQuery("Last active event processed, callback being set for admin interval.");
-                bytes32 queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "");
+                queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "");
                 validIds[queryId] = true; 
             } else {
-                bytes32 queryId = oraclize_query("URL", "");
+                queryId = oraclize_query("URL", "");
                 validIds[queryId] = true;        
             }
             
@@ -377,9 +379,10 @@ contract Mevu is Ownable, usingOraclize {
                 }
             }
             payout(wagerId, maker, taker);
-        } else {
-            addToOracleQueue(wagerId);
-        }      
+        }
+        // } else {
+        //     addToOracleQueue(wagerId);
+        // }      
     }
 
     /** @dev Pays out the wager if both the maker and taker have agreed, otherwise they need to wait for oracle settlement.               
@@ -480,8 +483,9 @@ contract Mevu is Ownable, usingOraclize {
       * @param max uint which corresponds to entries in oracleList array.
       */ 
     function randomNum(uint max) private {
-        randomNumRequired = true;        
-        bytes32 queryId = makeOraclizeQuery("Wolfram Alpha", strConcat("random number between 0 and ", bytes32ToString(uintToBytes(max))));
+        randomNumRequired = true;
+        string memory qString = strConcat("random number between 0 and ", bytes32ToString(uintToBytes(max)));        
+        bytes32 queryId = oraclize_query('Wolfram Alpha', qString);
         validIds[queryId] = true;
     }       
     
@@ -511,7 +515,7 @@ contract Mevu is Ownable, usingOraclize {
             callRandomNum(oracles.getOracleListLength()-1);
             
         }
-        assert(this.value-mevuBalance > playerFunds);
+        assert(this.balance - mevuBalance > playerFunds);
         mevuWallet.transfer(mevuBalance);
         mevuBalance = 0;
     }   
@@ -535,21 +539,21 @@ contract Mevu is Ownable, usingOraclize {
 
    
 
-    function addToOracleQueue (bytes32 wager) {
-        oracleQueue.push(wager);
-    }  
+    // function addToOracleQueue (bytes32 wager) {
+    //     oracleQueue.push(wager);
+    // }  
 
-    function getOracleQueueAt(uint index) view returns (bytes32) {
-        return oracleQueue[index];
-    }
+    // function getOracleQueueAt(uint index) view returns (bytes32) {
+    //     return oracleQueue[index];
+    // }
     
-    function getOracleQueueLength() view returns (uint) {
-        return oracleQueue.length;
-    }    
+    // function getOracleQueueLength() view returns (uint) {
+    //     return oracleQueue.length;
+    // }    
 
-    function deleteOracleQueue() {
-        delete oracleQueue;
-    }    
+    // function deleteOracleQueue() {
+    //     delete oracleQueue;
+    // }    
 
     function addMevuBalance (uint amount) onlyAuth {
         mevuBalance += amount;

@@ -22,7 +22,53 @@ contract WagersController is Ownable {
     modifier requireMinWager() {
         require (msg.value >= admin.getMinWagerAmount());
         _;
+    }
+
+ modifier eventUnlocked(bytes32 eventId){
+        require (!events.getLocked(eventId));
+        _;
+    }
+
+    modifier wagerUnlocked (bytes32 wagerId) {
+        require (!wagers.getLocked(wagerId));
+        _;
+    }    
+
+    modifier mustBeTaken (bytes32 wagerId) {
+        require (wagers.getTaker(wagerId) != address(0));
+        _;
+    }
+
+    modifier notSettled(bytes32 wagerId) {
+        require (!wagers.getSettled(wagerId));
+        _;           
+    }  
+
+    modifier checkBalance (uint wagerValue) {
+        require (rewards.getUnlockedEthBalance(msg.sender) + msg.value >= wagerValue);
+        _;
+    }      
+    
+    modifier notPaused() {
+        require (!mevu.getContractPaused());
+        _;
+    }
+
+
+    modifier onlyBettor (bytes32 wagerId) {
+        require (msg.sender == wagers.getMaker(wagerId) || msg.sender == wagers.getTaker(wagerId));
+        _;
+    }
+
+    modifier notTaken (bytes32 wagerId) {
+        require (wagers.getTaker(wagerId) == address(0));
+        _;
     } 
+
+    modifier notMade (bytes32 wagerId) {        
+        require (wagers.getMaker(wagerId) != address(0));
+        _;
+    }    
 
     function grantAuthority (address nowAuthorized) onlyOwner {
         isAuthorized[nowAuthorized] = true;
@@ -79,7 +125,8 @@ contract WagersController is Ownable {
            takerChoice = 1;
         }
         uint winningValue = value + (value / (odds/100));                     
-        wagers.makeWager  ( eventId,
+        wagers.makeWager  ( wagerId,
+                            eventId,
                             value,
                             winningValue,                            
                             makerChoice,
@@ -90,7 +137,7 @@ contract WagersController is Ownable {
                             maker);
         transferEthToMevu(msg.value);
         mevu.addToPlayerFunds(msg.value);      
-        events.addWager(eventId, wagerId);
+        //events.addWager(eventId, wagerId);
         rewards.addEth(msg.sender, msg.value);       
         rewards.subUnlockedEth(msg.sender, (value - msg.value));     
     }
@@ -101,7 +148,7 @@ contract WagersController is Ownable {
     function takeWager (
         bytes32 id      
     )   
-        eventUnlocked(getEventId(id))
+        eventUnlocked(wagers.getEventId(id))
         wagerUnlocked(id)       
         notPaused
         payable 
@@ -117,7 +164,7 @@ contract WagersController is Ownable {
         wagers.setTaker(id, taker);
         wagers.setLocked(id);
         wagers.setWinningValue(id, winningValue);        
-        events.addWager(wagers.getEventId(wagerId), winningValue);    
+        events.addWager(wagers.getEventId(id), winningValue);    
                       
     }    
 
