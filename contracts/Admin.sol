@@ -3,17 +3,39 @@ import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
 contract Admin is Ownable {   
-    
+    mapping (address => bool) private isAuthorized;    
     uint minWagerAmount = 10;
     uint callbackInterval = 15;
     uint minOracleStake = 1;
     uint callbackGasLimit = 600000;
-    uint minOracleNum = 7;
-   
+    int oracleRepPenalty = 25;
+    mapping (bytes32 => uint) minOracleNum;   
+    
+    modifier onlyAuth () {
+        require(isAuthorized[msg.sender]);               
+        _;
+    }
+
+    function grantAuthority (address nowAuthorized) onlyOwner {
+        isAuthorized[nowAuthorized] = true;
+    }
+
+    function removeAuthority (address unauthorized) onlyOwner {
+        isAuthorized[unauthorized] = false;
+    }
 
     function setMinOracleStake (uint newMin) external onlyOwner {
         minOracleStake = newMin;
-    }    
+    }
+
+    function setMinOracleNum (bytes32 eventId, uint min) external onlyAuth {
+        minOracleNum[eventId] = min;
+
+    }  
+
+    function setOracleRepPenalty (int penalty) external onlyOwner {
+        oracleRepPenalty = penalty;
+    } 
 
     function setCallbackGasLimit (uint newLimit) external onlyOwner {
         callbackGasLimit = newLimit;
@@ -44,15 +66,18 @@ contract Admin is Ownable {
     function getMinOracleStake () external view returns (uint) {
         return minOracleStake;
     }
+    
+    function getOracleRepPenalty () external view returns (int) {
+        return oracleRepPenalty;
+    }
 
     function getCallbackGasLimit() external view returns (uint) {
         return callbackGasLimit;
     }
 
-    function getMinOracleNum () external view returns (uint) {
-        return minOracleNum;
+    function getMinOracleNum (bytes32 eventId) external view returns (uint) {
+        return minOracleNum[eventId];
     }
-    
  
 
 }

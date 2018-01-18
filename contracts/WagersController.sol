@@ -117,7 +117,7 @@ contract WagersController is Ownable {
         notPaused
         payable 
     {        
-        address maker = msg.sender;
+       
         uint takerChoice;
         if (makerChoice == 1) {
           takerChoice = 2;
@@ -134,7 +134,7 @@ contract WagersController is Ownable {
                             odds,
                             0,
                             0,
-                            maker);
+                            msg.sender);
         transferEthToMevu(msg.value);
         mevu.addToPlayerFunds(msg.value);      
         //events.addWager(eventId, wagerId);

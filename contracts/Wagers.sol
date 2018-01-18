@@ -37,8 +37,7 @@ contract Wagers is Ownable {
     modifier onlyAuth () {
         require(isAuthorized[msg.sender]);               
                 _;
-    }  
-        
+    }          
    
     function grantAuthority (address nowAuthorized) external onlyOwner {
         isAuthorized[nowAuthorized] = true;
