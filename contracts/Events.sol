@@ -1,18 +1,11 @@
-pragma solidity ^0.4.18; 
+pragma solidity ^0.4.18;
+import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Oracles.sol";
-import "./Wagers.sol";
-import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
-
+import "./Admin.sol";
 contract Events is Ownable {
-    mapping (address => bool) private isAuthorized;
-    uint public eventsCount;
-    bytes32[] public activeEvents;   
-       
-    Oracles oracles;
-    Wagers wagers;
+
     Admin admin;
-    
-    address oraclesAddress;
+    Oracles oracles;
 
     struct StandardWagerEvent {        
         bytes32 name;       
@@ -31,51 +24,35 @@ contract Events is Ownable {
         bool locked;       
         bool cancelled;
     }
-
+    mapping (address => bool) private isAuthorized;
     mapping (bytes32 => StandardWagerEvent) standardEvents;
-    
-    // Empty mappings to instantiate events   
-    mapping (address => uint256) oracleStakes;
-    address[] emptyAddrArray;
     bytes32[] emptyBytes32Array;
- 
+    bytes32[] public activeEvents;
+    uint public eventsCount;
+
     modifier onlyAuth () {
         require(isAuthorized[msg.sender]);               
                 _;
     }
 
-    function grantAuthority (address nowAuthorized) onlyOwner {
+    function grantAuthority (address nowAuthorized) external onlyOwner {
         isAuthorized[nowAuthorized] = true;
     }
 
-    function removeAuthority (address unauthorized) onlyOwner {
+    function removeAuthority (address unauthorized) external onlyOwner {
         isAuthorized[unauthorized] = false;
     }
 
-    function setWagersContract (address thisAddr) external onlyOwner {
-        wagers = Wagers(thisAddr);        
+    function setOraclesContract (address thisAddr) external onlyOwner {
+        oracles = Oracles(thisAddr);
     }
 
-    function setOraclesContract (address thisAddr) external onlyAuth {
-        oracles = Oracles(thisAddr);        
-    } 
+    function setAdminContract (address thisAddr) external onlyOwner {
+        admin = Admin(thisAddr);
+    }   
+       
 
-    function setAdminContract (address thisAddr) external onlyAuth {
-        admin = Admin(thisAddr);        
-    } 
-
-    function Events () {
-        bytes32 empty;
-        activeEvents.push(empty);
-    }
-
-
-    function addResolvedWager (bytes32 eventId, uint value) onlyAuth {
-        standardEvents[eventId].totalAmountResolvedWithoutOracles += value;
-    }    
-
-  
-    /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
+     /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
       * @param name The name of the event to be diplayed.
       * @param startTime The date and time the event begins in the YYYYMMDD9999 format.
       * @param duration The length of the event in seconds.     
@@ -91,7 +68,7 @@ contract Events is Ownable {
         bytes32 teamTwo
     )
         external
-        onlyAuth            
+        onlyOwner            
     {        
         StandardWagerEvent memory thisEvent;   
         thisEvent = StandardWagerEvent( name,                                        
@@ -114,36 +91,12 @@ contract Events is Ownable {
         activeEvents.push(id);     
     }
 
-    function updateStandardEvent(
-        bytes32 eventId,
-        uint newStartTime,
-        uint newDuration,
-        bytes32 newTeamOne,
-        bytes32 newTeamTwo
-    ) 
-        external 
-        onlyAuth 
-    {
-        standardEvents[eventId].startTime = newStartTime;
-        standardEvents[eventId].duration = newDuration;
-        standardEvents[eventId].teamOne = newTeamOne;
-        standardEvents[eventId].teamTwo = newTeamTwo;       
-
+    function addResolvedWager (bytes32 eventId, uint value) {
+        standardEvents[eventId].totalAmountResolvedWithoutOracles += value;
     }
 
-    function cancelStandardEvent (bytes32 eventId) external onlyAuth {
-        standardEvents[eventId].voteReady = true;
-        standardEvents[eventId].locked = true;
-        standardEvents[eventId].cancelled = true;
-        uint indexToDelete = standardEvents[eventId].activeEventIndex;
-        uint lastItem = activeEvents.length - 1;
-        activeEvents[indexToDelete] = activeEvents[lastItem]; // Write over item to delete with last item
-        standardEvents[activeEvents[lastItem]].activeEventIndex = indexToDelete; //Point what was the last item to its new spot in array      
-        activeEvents.length -- ; // Delete what is now duplicate entry in last spot
-    }
-  
     function determineEventStage (bytes32 thisEventId, uint lastIndex) onlyAuth {
-        require (!getLocked(thisEventId));
+        
         uint eventEndTime = getStart(thisEventId) + getDuration(thisEventId);
         if (block.timestamp > eventEndTime){
             // Event is over
@@ -159,7 +112,7 @@ contract Events is Ownable {
     }
 
     function decideWinner (bytes32 eventId) internal {
-        require (oracles.getOracleVotesNum(eventId) >= admin.getMinOracleNum(eventId));
+        //require (oracles.getOracleVotesNum(eventId) >= admin.getMinOracleNum(eventId));
         uint teamOneCount = oracles.getVotesForOne(eventId);
         uint teamTwoCount = oracles.getVotesForTwo(eventId);
         uint tieCount = oracles.getVotesForThree(eventId);    
@@ -176,9 +129,10 @@ contract Events is Ownable {
                 }
             }
         }
-    } 
+    }     
 
-    function removeEventFromActive (bytes32 eventId) onlyAuth { 
+
+    function removeEventFromActive (bytes32 eventId) { 
         uint indexToDelete = standardEvents[eventId].activeEventIndex;
         uint lastItem = activeEvents.length - 1;
         activeEvents[indexToDelete] = activeEvents[lastItem]; // Write over item to delete with last item
@@ -251,5 +205,5 @@ contract Events is Ownable {
     function makeVoteReady (bytes32 id) internal {
         standardEvents[id].voteReady = true;
     }
-  
+
 }

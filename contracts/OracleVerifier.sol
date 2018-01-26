@@ -1,5 +1,5 @@
-pragma solidity 0.4.18;
-import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
+pragma solidity ^0.4.18;
+import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 /** @title Oracle Verifier -- This contract controls the adding to and removal from the list of verified oracles.
   * 
@@ -13,8 +13,6 @@ contract OracleVerifier is Ownable {
     mapping (address => uint) public timesRemoved;
     bytes32 empty;
 
-
-
     function OracleVerifier() {
         mevuAccount = msg.sender;
     }
@@ -23,7 +21,7 @@ contract OracleVerifier is Ownable {
       * @param newOracle - address of the new oracle.
       * @param phoneNumber - ten digit phone number belonging to Oracle which has already been verified.
       */
-    function addVerifiedOracle(address newOracle, bytes32 phoneNumber) onlyOwner {
+    function addVerifiedOracle(address newOracle, uint phoneNumber) onlyOwner {
         bytes32 phoneHash = keccak256(phoneNumber);
         if (verified[newOracle]) {
             revert();
@@ -46,12 +44,7 @@ contract OracleVerifier is Ownable {
     }
     
     function checkVerification (address oracle) external view returns (bool) {
-        if (verified[oracle]) {
-            return true;
-        } else {
-            return false;
-        }
-        
+      return verified[oracle];        
     }
     
 }

@@ -1,16 +1,8 @@
-pragma solidity ^0.4.18; 
-import "./Rewards.sol";
-import "./Events.sol";
-import "./Admin.sol";
-import "./Mevu.sol";
-import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
-
+pragma solidity ^0.4.18;
+import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 contract Wagers is Ownable {
 
-    Events events;
-    Rewards rewards;
-    Mevu mevu;
-
+    
     struct Wager {
         bytes32 eventId;        
         uint origValue;
@@ -30,23 +22,24 @@ contract Wagers is Ownable {
         bool settled;        
     }
 
+    mapping (address => bool) private isAuthorized;  
     mapping (bytes32 => Wager) wagersMap;
     mapping (address => mapping (bytes32 => bool)) recdRefund;
-    mapping (address => bool) private isAuthorized;  
 
     modifier onlyAuth () {
         require(isAuthorized[msg.sender]);               
                 _;
-    }          
-   
-    function grantAuthority (address nowAuthorized) external onlyOwner {
+    }
+
+    function grantAuthority (address nowAuthorized) onlyOwner {
         isAuthorized[nowAuthorized] = true;
     }
 
-    function removeAuthority (address unauthorized) external onlyOwner {
+    function removeAuthority (address unauthorized) onlyOwner {
         isAuthorized[unauthorized] = false;
-    } 
+    }
 
+    
     function makeWager (
         bytes32 wagerId, 
         bytes32 eventId,        
@@ -59,8 +52,7 @@ contract Wagers is Ownable {
         uint takerWinnerVote,
         address maker
         )
-            external
-            onlyAuth 
+            external             
         {
         Wager memory thisWager = Wager (eventId,
                                         origValue,
@@ -192,5 +184,6 @@ contract Wagers is Ownable {
     function getLoser (bytes32 id) external view returns (address) {
         return wagersMap[id].loser;
     }
+
 
 }

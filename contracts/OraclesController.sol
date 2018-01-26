@@ -1,20 +1,22 @@
-pragma solidity 0.4.18;
+pragma solidity ^0.4.18;
 import "./Events.sol";
+import "./Oracles.sol";
 import "./OracleVerifier.sol";
 import "./Rewards.sol";
-import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./MvuToken.sol";
 import "./Wagers.sol";
-import "./Mevu.sol";
+import "./Admin.sol";
+//import "./Mevu.sol";
 
 contract OraclesController is Ownable {
     Events events;
     OracleVerifier oracleVerif;
     Rewards rewards;
     Admin admin;
-    Wagers wagers;
+    //Wagers wagers;
     MvuToken mvuToken;
-    Mevu mevu;
+    //Mevu mevu;
     Oracles oracles;
 
     modifier eventUnlocked(bytes32 eventId){
@@ -36,11 +38,7 @@ contract OraclesController is Ownable {
         require (oracleVerif.checkVerification(msg.sender));
         _;
     }
-
-    modifier mustBeAllowed (bytes32 eventId) {
-        require (oracles.getAllowed(eventId, msg.sender));
-        _;
-    }
+   
 
     modifier mustBeVoteReady(bytes32 eventId) {
         require (events.getVoteReady(eventId));
@@ -68,13 +66,17 @@ contract OraclesController is Ownable {
         admin = Admin(thisAddr);
     }
 
+    function setOraclesContract (address thisAddr) external onlyOwner {
+        oracles = Oracles(thisAddr);
+    }
+
     function setMvuTokenContract (address thisAddr) external onlyOwner {
         mvuToken = MvuToken(thisAddr);
     }
 
-    function setMevuContract (address thisAddr) external onlyOwner {
-        mevu = Mevu(thisAddr);
-    }
+    // function setMevuContract (address thisAddr) external onlyOwner {
+    //     mevu = Mevu(thisAddr);
+    // }
 
     /** @dev Registers a user as an Oracle for the chosen event. Before being able to register the user must
       * allow the contract to move their MVU through the Token contract.                
@@ -89,22 +91,24 @@ contract OraclesController is Ownable {
     ) 
         eventUnlocked(eventId) 
         onlyVerified          
-        mustBeVoteReady(eventId)
-        mustBeAllowed(eventId) 
+        mustBeVoteReady(eventId)       
     {
-        //require (keccak256(strConcat(addrToString(msg.sender),  bytes32ToString(eventId))) == oracleId);       
+        //require (keccak256(strConcat(addrToString(msg.sender),  bytes32ToString(eventId))) == oracleId);
+        require (!oracles.getRegistered(msg.sender, eventId));       
         require(mvuStake >= admin.getMinOracleStake());
         require(winnerVote == 1 || winnerVote == 2 || winnerVote == 3);            
+        oracles.setRegistered(msg.sender, eventId);
         bytes32 empty;
         if (oracles.getLastEventOraclized(msg.sender) == empty) {
             oracles.addToOracleList(msg.sender);                
         }
         oracles.setLastEventOraclized(msg.sender, eventId) ;
-        transferTokensToMevu(msg.sender, mvuStake);    
-        if (oracles.getMvuStake(eventId, msg.sender) == 0) {
+        //transferTokensToMevu(msg.sender, mvuStake);
+        mvuToken.transferFrom(msg.sender, address(this), mvuStake);     
+       // if (oracles.getMvuStake(eventId, msg.sender) == 0) {
             oracles.addOracle (msg.sender, eventId, mvuStake, winnerVote);                  
             rewards.addMvu(msg.sender, mvuStake);          
-        }                 
+                         
     }
 
     // Called by oracle to get paid after event voting closes
@@ -125,25 +129,29 @@ contract OraclesController is Ownable {
         }         
         if (events.getWinner(eventId) == 3) {
             mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForThree(eventId); 
-        } 
+        }
         
-        uint twoPercentRewardPool = 2 * events.getTotalAmountResolvedWithoutOracles(eventId)/100;
-        uint threePercentRewardPool = 3 * (events.getTotalAmountBet(eventId) - events.getTotalAmountResolvedWithoutOracles(eventId))/100;
+        
+         uint twoPercentRewardPool = 2 * events.getTotalAmountResolvedWithoutOracles(eventId);
+         twoPercentRewardPool /= 100;
+         uint threePercentRewardPool = 3 * (events.getTotalAmountBet(eventId) - events.getTotalAmountResolvedWithoutOracles(eventId));
+         threePercentRewardPool /= 100;
         uint totalRewardPool = (threePercentRewardPool/12) + (threePercentRewardPool/3) + (twoPercentRewardPool/8);
-        uint stakePercentageTimesTen = 1000 * oracles.getMvuStake(eventId, msg.sender);
-        stakePercentageTimesTen /= oracles.getTotalOracleStake(eventId);
+        uint stakePercentage = 100000 * oracles.getMvuStake(eventId, msg.sender);
+        stakePercentage /= (oracles.getTotalOracleStake(eventId) - mvuRewardPool);
+        mvuRewardPool /= 2; 
 
         if (oracles.getWinnerVote(eventId, msg.sender) == events.getWinner(eventId)) {
-            ethReward = (totalRewardPool/1000) * stakePercentageTimesTen;
+            ethReward = (totalRewardPool/100000) * stakePercentage;
             rewards.addUnlockedEth(msg.sender, ethReward);             
             rewards.addEth(msg.sender, ethReward);
 
-            mvuReward = (mvuRewardPool/1000) * stakePercentageTimesTen;
+            mvuReward = (mvuRewardPool/100000) * stakePercentage;
             rewards.addMvu(msg.sender, mvuReward);
             mvuReward += oracles.getMvuStake(eventId, msg.sender);
             rewards.addUnlockedMvu(msg.sender, mvuReward);
-           
-            
+
+            rewards.addOracleRep(msg.sender, admin.getOracleRepReward());           
             
         } else {
             mvuReward = oracles.getMvuStake(eventId, msg.sender)/2;
@@ -164,7 +172,14 @@ contract OraclesController is Ownable {
    
 
     function transferTokensToMevu (address oracle, uint mvuStake) internal {
-        mvuToken.transferFrom(oracle, address(mevu), mvuStake);       
+        //mvuToken.transferFrom(oracle, address(mevu), mvuStake);       
+    }
+
+    function withdraw (uint mvu) {
+        require (rewards.getUnlockedMvuBalance(msg.sender) >= mvu);
+        rewards.subUnlockedMvu(msg.sender, mvu);
+        rewards.subMvu(msg.sender, mvu);
+        mvuToken.transfer (msg.sender, mvu);
     }
 
 

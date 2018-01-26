@@ -2,7 +2,7 @@ pragma solidity ^0.4.18;
 
 
 //import './MvuTokenBet.sol';
-import '../../zeppelin-solidity/contracts/token/MintableToken.sol';
+import '../zeppelin-solidity/contracts/token/MintableToken.sol';
 
 /**
  * @title MvuToken
@@ -12,7 +12,7 @@ import '../../zeppelin-solidity/contracts/token/MintableToken.sol';
 
 contract MvuToken is MintableToken {
     event TokensMade(address indexed to, uint amount); 
-    uint  saleEnd = 1519022651; // TODO: Update with actual date
+    uint  saleEnd = 1515645598; // TODO: Update with actual date
     uint betsEnd = 1519000651;  // TODO: Update with actual date
     uint tokenCap = 100000000; // TODO: Update with actual cap
     //MvuTokenBet public bet;

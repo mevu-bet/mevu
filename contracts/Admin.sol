@@ -1,14 +1,15 @@
-pragma solidity 0.4.18;
-import "../../zeppelin-solidity/contracts/ownership/Ownable.sol";
+pragma solidity ^0.4.18;
+import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
 contract Admin is Ownable {   
     mapping (address => bool) private isAuthorized;    
     uint minWagerAmount = 10;
-    uint callbackInterval = 15;
+    uint callbackInterval = 5;
     uint minOracleStake = 1;
-    uint callbackGasLimit = 600000;
-    int oracleRepPenalty = 25;
+    uint callbackGasLimit = 900000;
+    int oracleRepPenalty = 4;
+    int oracleRepReward = 1;
     mapping (bytes32 => uint) minOracleNum;   
     
     modifier onlyAuth () {
@@ -24,7 +25,7 @@ contract Admin is Ownable {
         isAuthorized[unauthorized] = false;
     }
 
-    function setMinOracleStake (uint newMin) external onlyOwner {
+    function setMinOracleStake (uint newMin) external onlyAuth {
         minOracleStake = newMin;
     }
 
@@ -33,25 +34,29 @@ contract Admin is Ownable {
 
     }  
 
-    function setOracleRepPenalty (int penalty) external onlyOwner {
+    function setOracleRepPenalty (int penalty) external onlyAuth {
         oracleRepPenalty = penalty;
     } 
 
-    function setCallbackGasLimit (uint newLimit) external onlyOwner {
+    function setOracleRepReward (int reward) external onlyAuth {
+        oracleRepReward = reward;
+    } 
+
+    function setCallbackGasLimit (uint newLimit) external onlyAuth {
         callbackGasLimit = newLimit;
     }    
     
     /** @dev Sets a new number for the interval in between callback functions.
       * @param newInterval The new interval between oraclize callbacks.        
       */
-    function setCallbackInterval(uint newInterval) external onlyOwner {  
+    function setCallbackInterval(uint newInterval) external onlyAuth {  
        callbackInterval = newInterval;
     }
 
     /** @dev Updates the minimum amount of ETH required to make a wager.
       * @param minWager The new required minimum amount of ETH to make a wager.
       */
-    function setMinWagerAmount(uint256 minWager) external onlyOwner {
+    function setMinWagerAmount(uint256 minWager) external onlyAuth {
         minWagerAmount = minWager;
     }  
     
@@ -65,6 +70,10 @@ contract Admin is Ownable {
 
     function getMinOracleStake () external view returns (uint) {
         return minOracleStake;
+    }
+
+    function getOracleRepReward () external view returns (int) {
+        return oracleRepReward;
     }
     
     function getOracleRepPenalty () external view returns (int) {
