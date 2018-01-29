@@ -190,6 +190,10 @@ contract Events is Ownable {
         return standardEvents[id].duration;
     }
 
+    function getEndTime (bytes32 id) view returns (uint) {
+        return (standardEvents[id].startTime + standardEvents[id].duration);
+    }
+
     function getLocked(bytes32 id) view returns (bool) {
         return standardEvents[id].locked;
     }

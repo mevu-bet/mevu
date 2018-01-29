@@ -1,12 +1,8 @@
 pragma solidity ^0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
-//import "./Admin.sol";
-//import "./Oracles.sol";
 
 contract Rewards is Ownable {
-    mapping (address => bool) private isAuthorized;  
-    //Admin admin;
-    //Oracles oracles;
+    mapping (address => bool) private isAuthorized;   
     mapping(address => int) public playerRep;
     mapping (address => int) public oracleRep;  
     mapping (address => uint)  ethBalance;
@@ -26,39 +22,7 @@ contract Rewards is Ownable {
     function removeAuthority (address unauthorized) onlyOwner {
         isAuthorized[unauthorized] = false;
     }
-
-    // function setOraclesContract (address thisAddr) external onlyOwner {
-    //     oracles = Oracles(thisAddr);
-    // }
-
-    // function setAdminContract (address thisAddr) external onlyOwner {
-    //     admin = Admin(thisAddr);
-    // }
-   
-    function getEthBalance(address user) external view returns (uint) {
-        return ethBalance[user];
-    }
-
-    function getMvuBalance(address user) external view returns (uint) {
-        return mvuBalance[user];
-    }
-
-    function getUnlockedEthBalance(address user) external view returns (uint) {
-        return unlockedEthBalance[user];
-    }
-
-    function getUnlockedMvuBalance(address user) external view returns (uint) {
-        return unlockedMvuBalance[user];
-    }
-
-    function getOracleRep (address oracle) external view returns (int) {
-        return oracleRep[oracle];
-    } 
-
-    function getPlayerRep (address player) external view returns (int) {
-        return playerRep[player];
-    } 
-
+  
     function subEth(address user, uint amount) external onlyAuth {
         ethBalance[user] -= amount;
     }
@@ -106,4 +70,28 @@ contract Rewards is Ownable {
     function addPlayerRep(address player, int value) external onlyAuth {
         playerRep[player] += value;
     }
+      
+    function getEthBalance(address user) external view returns (uint) {
+        return ethBalance[user];
+    }
+
+    function getMvuBalance(address user) external view returns (uint) {
+        return mvuBalance[user];
+    }
+
+    function getUnlockedEthBalance(address user) external view returns (uint) {
+        return unlockedEthBalance[user];
+    }
+
+    function getUnlockedMvuBalance(address user) external view returns (uint) {
+        return unlockedMvuBalance[user];
+    }
+
+    function getOracleRep (address oracle) external view returns (int) {
+        return oracleRep[oracle];
+    } 
+
+    function getPlayerRep (address player) external view returns (int) {
+        return playerRep[player];
+    } 
 } 

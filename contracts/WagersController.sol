@@ -14,7 +14,7 @@ contract WagersController is Ownable {
     Wagers wagers;
     Mevu mevu; 
 
- modifier eventUnlocked(bytes32 eventId){
+    modifier eventUnlocked(bytes32 eventId){
         require (!events.getLocked(eventId));
         _;
     }
@@ -50,7 +50,6 @@ contract WagersController is Ownable {
         _;
     }
 
-
     modifier onlyBettor (bytes32 wagerId) {
         require (msg.sender == wagers.getMaker(wagerId) || msg.sender == wagers.getTaker(wagerId));
         _;
@@ -64,8 +63,7 @@ contract WagersController is Ownable {
     modifier notMade (bytes32 wagerId) {        
         require (wagers.getMaker(wagerId) == address(0));
         _;
-    } 
-    
+    }     
 
     function setWagersContract (address thisAddr) external onlyOwner {
         wagers = Wagers(thisAddr);        
@@ -120,6 +118,7 @@ contract WagersController is Ownable {
                             msg.sender);
         rewards.addEth(msg.sender, msg.value);       
         rewards.subUnlockedEth(msg.sender, (value - msg.value));
+        address(mevu).transfer(msg.value);
   
 
     }
@@ -136,7 +135,10 @@ contract WagersController is Ownable {
         wagers.setTaker(id, msg.sender);
         wagers.setLocked(id); 
         uint totalValue = expectedValue + wagers.getOrigValue(id);    
-        events.addWager(wagers.getEventId(id), totalValue);      
+        events.addWager(wagers.getEventId(id), totalValue);    
+        address(mevu).transfer(msg.value);
+  
+  
 
     }
 
@@ -148,7 +150,7 @@ contract WagersController is Ownable {
         bytes32 wagerId,
         uint winnerVote
     ) 
-        //onlyBettor(wagerId) 
+        onlyBettor(wagerId) 
         mustBeVoteReady(wagers.getEventId(wagerId))
         notPaused 
     {
@@ -183,21 +185,20 @@ contract WagersController is Ownable {
         uint origValue = wagers.getOrigValue(wagerId);
         uint payoutValue = wagers.getWinningValue(wagerId); 
         uint fee = (payoutValue/100) * 2; // Sevice fee is 2 percent
-
-        payoutValue -= fee;  
+        payoutValue -= fee; 
+         mevu.addMevuBalance(3*(fee/4)); 
+         mevu.addLotteryBalance(fee/8);
         if (wagers.getMakerWinVote(wagerId) == wagers.getTakerWinVote(wagerId)) {
             if (wagers.getMakerWinVote(wagerId) == wagers.getMakerChoice(wagerId)) {
                 wagers.setWinner(wagerId, maker);
-                rewards.subEth(maker, origValue);
-                rewards.addEth(maker, payoutValue);
+                rewards.subEth(maker, origValue);                
                 rewards.subEth(taker, wagers.getWinningValue(wagerId) - origValue);
             } else {
                 if (wagers.getMakerWinVote(wagerId) == 3) {
                     wagers.setWinner(wagerId, address(0));                    
                 } else {
                     rewards.subEth(taker, wagers.getWinningValue(wagerId) - origValue);
-                    wagers.setWinner(wagerId, taker);
-                    rewards.addEth(taker, payoutValue);
+                    wagers.setWinner(wagerId, taker);                   
                     rewards.subEth(maker, origValue);
                 }
             }
@@ -220,38 +221,28 @@ contract WagersController is Ownable {
        /** @dev Pays out the wager if both the maker and taker have agreed, otherwise they need to wait for oracle settlement.               
        * @param wagerId bytes32 id for the wager.         
        */
-     function payout(bytes32 wagerId, address maker, address taker, uint payoutValue) internal {  
+    function payout(bytes32 wagerId, address maker, address taker, uint payoutValue) internal {  
             require(!wagers.getSettled(wagerId));
             wagers.setSettled(wagerId);           
             uint origVal =  wagers.getOrigValue(wagerId);
             uint winVal = wagers.getWinningValue(wagerId);
-             if (wagers.getWinner(wagerId) == address(0)) { //Tie
-                maker.transfer(origVal);
-                taker.transfer(winVal-origVal);             
-              
-             } else {
-              
-                
-                //mevuBalance += (3*(fee/4));
-                rewards.subEth(wagers.getWinner(wagerId), payoutValue);
-                           
-                //lotteryBalance += (fee/8);
-                                       
-                wagers.getWinner(wagerId).transfer(payoutValue);  
+            address winner = wagers.getWinner(wagerId);
+             if (winner == address(0)) { //Tie
+                mevu.transferEth(maker, origVal);
+                mevu.transferEth(taker, winVal-origVal);                 
+             } else {            
                 events.addResolvedWager(wagers.getEventId(wagerId), winVal);              
+                mevu.transferEth(winner, payoutValue);                          
             }                             
-            rewards.addPlayerRep(maker, 1);
-            rewards.addPlayerRep(taker, 1);
-            
-              
+            rewards.addPlayerRep(maker, admin.getPlayerAgreeRepReward());
+            rewards.addPlayerRep(taker, admin.getPlayerAgreeRepReward());             
     }
 
 
-      /** @dev Pays out the wager after oracle settlement.               
+    /** @dev Pays out the wager after oracle settlement.               
     * @param wagerId bytes32 id for the wager.         
     */
-    function lateSettledPayout(bytes32 wagerId) internal {
-        
+    function lateSettledPayout(bytes32 wagerId) internal {        
         require(!wagers.getSettled(wagerId));
             wagers.setSettled(wagerId);
             wagers.setLocked(wagerId);   
@@ -259,11 +250,9 @@ contract WagersController is Ownable {
             uint winningValue = wagers.getWinningValue(wagerId);           
             uint payoutValue = winningValue;
             uint fee = (payoutValue/100) * 3; //Fee is now 3 percent since oracles were used
-            //mevu.addMevuBalance(fee/2);            
-            //mevu.addLotteryBalance(fee/12);
-            payoutValue -= fee;           
-            //uint oracleFee = (fee/12) + (fee/3);
-          
+            mevu.addMevuBalance(fee/2);            
+            mevu.addLotteryBalance(fee/12);
+            payoutValue -= fee;            
             address maker = wagers.getMaker(wagerId);
             address taker = wagers.getTaker(wagerId);                    
             if (wagers.getWinner(wagerId) == maker) { // Maker won
@@ -278,13 +267,11 @@ contract WagersController is Ownable {
                 rewards.addEth(taker, payoutValue);
                 rewards.addPlayerRep(taker, 1);
                 rewards.subPlayerRep(maker, 2);
-            }           
-        
+            }      
     }
 
     function withdraw(
-        uint eth
-    
+        uint eth    
     )
         notPaused   
         external         
@@ -293,10 +280,10 @@ contract WagersController is Ownable {
         rewards.subUnlockedEth(msg.sender, eth);
         rewards.subEth(msg.sender, eth);
         //playerFunds -= eth;
-        msg.sender.transfer(eth);        
+        mevu.transferEth(msg.sender, eth);         
+    }
+    
         
-         
-    }   
 
     /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
      *  been cancelled, refunds all eth.               
@@ -310,6 +297,7 @@ contract WagersController is Ownable {
         if (taker != address(0)) {         
             rewards.addUnlockedEth(wagers.getTaker(wagerId), (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
         }             
-    }   
+    }    
+
 
 }

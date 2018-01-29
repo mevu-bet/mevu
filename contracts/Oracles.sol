@@ -1,11 +1,5 @@
 pragma solidity ^0.4.18;
-import "./Events.sol";
-import "./OracleVerifier.sol";
-import "./Rewards.sol";
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
-//import "./MvuToken.sol";
-import "./Wagers.sol";
-//import "./Mevu.sol";
 
 contract Oracles is Ownable {  
 
@@ -35,9 +29,7 @@ contract Oracles is Ownable {
     mapping (address => bool) private isAuthorized;         
     mapping (address => mapping (bytes32 => OracleStruct)) oracleStructs; 
     mapping (bytes32 => EventStruct) eventStructs;   
-    mapping (address => bytes32) lastEventOraclized;
-    //mapping(address => bytes32[])  oracles;
-    //mapping(bytes32 => OracleStruct) oracleStructs;   
+    mapping (address => bytes32) lastEventOraclized;    
     address[] oracleList; // List of people who have ever registered as an oracle    
     address[] correctOracles;
     bytes32[] correctStructs;
@@ -146,8 +138,7 @@ contract Oracles is Ownable {
     
     function getOracleVotesNum (bytes32 eventId) view returns (uint) {
         return eventStructs[eventId].oracleVotes;
-    }
-   
+    }   
 
     function getTotalOracleStake (bytes32 eventId) external view returns (uint) {
         return eventStructs[eventId].totalOracleStake;

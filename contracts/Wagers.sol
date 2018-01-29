@@ -1,8 +1,7 @@
 pragma solidity ^0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 contract Wagers is Ownable {
-
-    
+        
     struct Wager {
         bytes32 eventId;        
         uint origValue;
@@ -38,7 +37,6 @@ contract Wagers is Ownable {
     function removeAuthority (address unauthorized) onlyOwner {
         isAuthorized[unauthorized] = false;
     }
-
     
     function makeWager (
         bytes32 wagerId, 
@@ -52,7 +50,8 @@ contract Wagers is Ownable {
         uint takerWinnerVote,
         address maker
         )
-            external             
+            external
+            onlyAuth             
         {
         Wager memory thisWager = Wager (eventId,
                                         origValue,
@@ -121,19 +120,19 @@ contract Wagers is Ownable {
         return wagersMap[wagerId].eventId;
     }
 
-    function getLocked (bytes32 id)  view returns (bool) {
+    function getLocked (bytes32 id) external view returns (bool) {
         return wagersMap[id].locked;
     }
 
-    function getSettled (bytes32 id)  view returns (bool) {
+    function getSettled (bytes32 id) external view returns (bool) {
         return wagersMap[id].settled;
     }
 
-    function getMaker(bytes32 id)  view returns (address) {
+    function getMaker(bytes32 id) external view returns (address) {
         return wagersMap[id].maker;
     }
 
-    function getTaker(bytes32 id)  view returns (address) {
+    function getTaker(bytes32 id) external view returns (address) {
         return wagersMap[id].taker;
     }
 

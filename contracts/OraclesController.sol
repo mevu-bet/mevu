@@ -5,18 +5,16 @@ import "./OracleVerifier.sol";
 import "./Rewards.sol";
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./MvuToken.sol";
-import "./Wagers.sol";
 import "./Admin.sol";
-//import "./Mevu.sol";
+import "./Mevu.sol";
 
 contract OraclesController is Ownable {
     Events events;
     OracleVerifier oracleVerif;
     Rewards rewards;
-    Admin admin;
-    //Wagers wagers;
+    Admin admin;   
     MvuToken mvuToken;
-    //Mevu mevu;
+    Mevu mevu;
     Oracles oracles;
 
     modifier eventUnlocked(bytes32 eventId){
@@ -70,6 +68,10 @@ contract OraclesController is Ownable {
         oracles = Oracles(thisAddr);
     }
 
+    function setMevuContract (address thisAddr) external onlyOwner {
+        mevu = Mevu(thisAddr);
+    }
+
     function setMvuTokenContract (address thisAddr) external onlyOwner {
         mvuToken = MvuToken(thisAddr);
     }
@@ -103,11 +105,10 @@ contract OraclesController is Ownable {
             oracles.addToOracleList(msg.sender);                
         }
         oracles.setLastEventOraclized(msg.sender, eventId) ;
-        //transferTokensToMevu(msg.sender, mvuStake);
-        mvuToken.transferFrom(msg.sender, address(this), mvuStake);     
-       // if (oracles.getMvuStake(eventId, msg.sender) == 0) {
-            oracles.addOracle (msg.sender, eventId, mvuStake, winnerVote);                  
-            rewards.addMvu(msg.sender, mvuStake);          
+        transferTokensToMevu(msg.sender, mvuStake);
+        //mvuToken.transferFrom(msg.sender, address(this), mvuStake);       
+        oracles.addOracle (msg.sender, eventId, mvuStake, winnerVote);                  
+        rewards.addMvu(msg.sender, mvuStake);          
                          
     }
 
@@ -121,6 +122,7 @@ contract OraclesController is Ownable {
         uint ethReward;
         uint mvuReward;
         uint mvuRewardPool;
+        
         if (events.getWinner(eventId) == 1) {
             mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForOne(eventId); 
         } 
@@ -129,13 +131,12 @@ contract OraclesController is Ownable {
         }         
         if (events.getWinner(eventId) == 3) {
             mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForThree(eventId); 
-        }
-        
-        
-         uint twoPercentRewardPool = 2 * events.getTotalAmountResolvedWithoutOracles(eventId);
-         twoPercentRewardPool /= 100;
-         uint threePercentRewardPool = 3 * (events.getTotalAmountBet(eventId) - events.getTotalAmountResolvedWithoutOracles(eventId));
-         threePercentRewardPool /= 100;
+        }  
+
+        uint twoPercentRewardPool = 2 * events.getTotalAmountResolvedWithoutOracles(eventId);
+        twoPercentRewardPool /= 100;
+        uint threePercentRewardPool = 3 * (events.getTotalAmountBet(eventId) - events.getTotalAmountResolvedWithoutOracles(eventId));
+        threePercentRewardPool /= 100;
         uint totalRewardPool = (threePercentRewardPool/12) + (threePercentRewardPool/3) + (twoPercentRewardPool/8);
         uint stakePercentage = 100000 * oracles.getMvuStake(eventId, msg.sender);
         stakePercentage /= (oracles.getTotalOracleStake(eventId) - mvuRewardPool);
@@ -145,34 +146,25 @@ contract OraclesController is Ownable {
             ethReward = (totalRewardPool/100000) * stakePercentage;
             rewards.addUnlockedEth(msg.sender, ethReward);             
             rewards.addEth(msg.sender, ethReward);
-
             mvuReward = (mvuRewardPool/100000) * stakePercentage;
             rewards.addMvu(msg.sender, mvuReward);
             mvuReward += oracles.getMvuStake(eventId, msg.sender);
             rewards.addUnlockedMvu(msg.sender, mvuReward);
-
-            rewards.addOracleRep(msg.sender, admin.getOracleRepReward());           
-            
+            rewards.addOracleRep(msg.sender, admin.getOracleRepReward());             
         } else {
             mvuReward = oracles.getMvuStake(eventId, msg.sender)/2;
             rewards.subMvu(msg.sender, mvuReward);
             rewards.addUnlockedMvu(msg.sender, mvuReward);
             rewards.subOracleRep(msg.sender, admin.getOracleRepPenalty());
         }
-
-
     }
 
     // called by oracle to get refund if not enough oracles register and oracle settlement is cancelled
     function claimRefund (bytes32 eventId) {
-        
-
-    }
-
-   
+    }   
 
     function transferTokensToMevu (address oracle, uint mvuStake) internal {
-        //mvuToken.transferFrom(oracle, address(mevu), mvuStake);       
+        mvuToken.transferFrom(oracle, address(mevu), mvuStake);       
     }
 
     function withdraw (uint mvu) {

@@ -7,9 +7,11 @@ contract Admin is Ownable {
     uint minWagerAmount = 10;
     uint callbackInterval = 5;
     uint minOracleStake = 1;
+    uint maxOracleInterval= 604800; //Time in seconds allowed since the last event an oracle service was performed (to win lottery)
     uint callbackGasLimit = 900000;
     int oracleRepPenalty = 4;
     int oracleRepReward = 1;
+    int playerAgreeRepReward = 1;
     mapping (bytes32 => uint) minOracleNum;   
     
     modifier onlyAuth () {
@@ -31,7 +33,10 @@ contract Admin is Ownable {
 
     function setMinOracleNum (bytes32 eventId, uint min) external onlyAuth {
         minOracleNum[eventId] = min;
+    }
 
+    function setMaxOracleInterval (uint max) external onlyAuth {
+        maxOracleInterval = max;
     }  
 
     function setOracleRepPenalty (int penalty) external onlyAuth {
@@ -40,6 +45,10 @@ contract Admin is Ownable {
 
     function setOracleRepReward (int reward) external onlyAuth {
         oracleRepReward = reward;
+    }
+
+     function setPlayerAgreeRepReward (int reward) external onlyAuth {
+        playerAgreeRepReward = reward;
     } 
 
     function setCallbackGasLimit (uint newLimit) external onlyAuth {
@@ -63,6 +72,10 @@ contract Admin is Ownable {
     function getCallbackInterval() external view returns (uint) {
        return callbackInterval;
     }
+
+    function getMaxOracleInterval() external view returns (uint) {
+       return maxOracleInterval;
+    }
     
     function getMinWagerAmount() external view returns (uint) {
        return minWagerAmount;
@@ -74,6 +87,10 @@ contract Admin is Ownable {
 
     function getOracleRepReward () external view returns (int) {
         return oracleRepReward;
+    }
+
+    function getPlayerAgreeRepReward () external view returns (int) {
+        return playerAgreeRepReward;
     }
     
     function getOracleRepPenalty () external view returns (int) {
