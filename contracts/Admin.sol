@@ -5,7 +5,7 @@ import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 contract Admin is Ownable {   
     mapping (address => bool) private isAuthorized;    
     uint minWagerAmount = 10;
-    uint callbackInterval = 5;
+    uint callbackInterval = 1;
     uint minOracleStake = 1;
     uint maxOracleInterval= 604800; //Time in seconds allowed since the last event an oracle service was performed (to win lottery)
     uint callbackGasLimit = 900000;

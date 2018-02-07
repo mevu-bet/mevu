@@ -48,6 +48,16 @@ contract OraclesController is Ownable {
         _;
     }
 
+    modifier noWinner (bytes32 eventId) {
+        require (events.getWinner(eventId) == 0);
+        _;
+    }
+
+    modifier refundNotClaimed (bytes32 eventId) {
+        require (!oracles.getRefunded(eventId, msg.sender));
+        _;
+    }
+
     function setOracleVerifContract (address thisAddr) external onlyOwner {
         oracleVerif  = OracleVerifier(thisAddr);
     }
@@ -160,7 +170,19 @@ contract OraclesController is Ownable {
     }
 
     // called by oracle to get refund if not enough oracles register and oracle settlement is cancelled
-    function claimRefund (bytes32 eventId) {
+    function claimRefund (bytes32 eventId)
+        refundNotClaimed(eventId)
+        onlyOracle(eventId)
+        eventLocked(eventId)
+        noWinner(eventId)
+    {
+        oracles.setRefunded(msg.sender, eventId);
+        uint amount;
+        amount = oracles.getMvuStake(eventId, msg.sender);
+        //assert(rewards.getMvuBalance(msg.sender) >= amount);
+        rewards.addUnlockedMvu(msg.sender, amount);
+       // rewards.subMvu(msg.sender, amount);
+       // mevu.transferTokensFromMevu(msg.sender, amount);
     }   
 
     function transferTokensToMevu (address oracle, uint mvuStake) internal {

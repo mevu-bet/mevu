@@ -41,7 +41,7 @@ contract('Mevu', function(accounts) {
    let balanceB;
    let balanceC;
 
-   beforeEach('setup contract for each test', async function () {
+    beforeEach('setup contract for each test', async function () {
        mevu = await Mevu.deployed();
        events = await Events.deployed();
        admin = await Admin.deployed();
@@ -53,9 +53,8 @@ contract('Mevu', function(accounts) {
        oracles = await Oracles.deployed();
        oraclesController = await OraclesController.deployed();
 
-       mvuToken = await MvuToken.deployed();
-     
-   });
+       mvuToken = await MvuToken.deployed();     
+    });
 
 
 //    describe('transferring tokens -- ', function () {
@@ -85,6 +84,7 @@ contract('Mevu', function(accounts) {
             await oraclesController.setAdminContract(admin.address).should.be.fulfilled;
             await wagersController.setAdminContract(admin.address).should.be.fulfilled; 
             await mevu.setAdminContract(admin.address).should.be.fulfilled;
+            events.setAdminContract(admin.address).should.be.fulfilled;
         });
 
         it ("should let owner set Oracles address", async function() {
@@ -104,7 +104,8 @@ contract('Mevu', function(accounts) {
 
         it ("should let owner set Mevu address", async function() {
             await wagersController.setMevuContract(mevu.address).should.be.fulfilled; 
-            await oraclesController.setMevuContract(mevu.address).should.be.fulfilled; 
+            await oraclesController.setMevuContract(mevu.address).should.be.fulfilled;
+            await events.setMevuContract(mevu.address).should.be.fulfilled; 
         });
 
 
@@ -117,6 +118,9 @@ contract('Mevu', function(accounts) {
         it ("should let owner set MvuToken address", async function() {
             await oraclesController.setMvuTokenContract(mvuToken.address).should.be.fulfilled; 
         });
+
+    });
+
 
 //         it ("should let the owner transfer ownership of rewards to mevu", async function () {
 //             await rewards.transferOwnership(instance.address).should.be.fulfilled;
@@ -151,8 +155,7 @@ contract('Mevu', function(accounts) {
 //          });
 
        
-    });
-
+ 
     describe('granting authority -- ', function () {
         it ("should let owner grant authority for Rewards", async function() {
             await rewards.grantAuthority(wagersController.address).should.be.fulfilled;
@@ -176,17 +179,18 @@ contract('Mevu', function(accounts) {
         });
         it ("should let owner grant authority for Mevu", async function() {
             await mevu.grantAuthority(wagersController.address).should.be.fulfilled;
+            await mevu.grantAuthority(events.address).should.be.fulfilled;
+            await mevu.grantAuthority(oraclesController.address).should.be.fulfilled;
         });
     });
 
     describe('approving token transfers -- ', function () {
         it ("should let anyone approve transfers from token contract", async function() {
-            await mvuToken.approve(oraclesController.address, 5000000000).should.be.fulfilled;
-           
+            await mvuToken.approve(oraclesController.address, 5000000000).should.be.fulfilled;           
             await mvuToken.transfer(accounts[1], 1000000000).should.be.fulfilled;
             await mvuToken.transfer(accounts[2], 1000000000).should.be.fulfilled;
             await mvuToken.transfer(accounts[3], 100000000).should.be.fulfilled;
-            await mvuToken.transfer(accounts[4], 1000000).should.be.fulfilled;
+            await mvuToken.transfer(accounts[4], 2000000).should.be.fulfilled;
             await mvuToken.approve(oraclesController.address, 1000000000, {from: accounts[1]}).should.be.fulfilled;
             await mvuToken.approve(oraclesController.address, 1000000000, {from: accounts[2]}).should.be.fulfilled;
             await mvuToken.approve(oraclesController.address, 1000000000, {from: accounts[3]}).should.be.fulfilled;
@@ -195,23 +199,32 @@ contract('Mevu', function(accounts) {
     });
 
 
-
-
     describe('making and updating events -- ', function () {
-        it ("should let owner create events", async function() {                
+        it ("should let owner create events", async function() {              
           
             await events.makeStandardEvent( web3.sha3("test_event2"),
                                               web3.sha3("test_event2"),
                                               1512519349,
                                               6000,                                             
                                               web3.sha3("team1"),
+                                               web3.sha3("team2")).should.be.fulfilled;                               
+            await events.makeStandardEvent( web3.sha3("test_event3"),
+                                              web3.sha3("test_event3"),
+                                              1512519349,
+                                              6000,                                             
+                                              web3.sha3("team1"),
                                               web3.sha3("team2")).should.be.fulfilled;                               
-        });
+         });
+        
 
         it ("should let owner set min oracle num", async function() {
-            await admin.setMinOracleNum (web3.sha3("test_event2"), 3);           
-        });
- 
+            await admin.setMinOracleNum (web3.sha3("test_event2"), 3);  
+            await admin.setMinOracleNum (web3.sha3("test_event3"), 3);                                
+        });       
+    }); 
+    
+
+
     //     it('should prevent non-owners from creating events', async function () {
     //         await instance.makeStandardEvent(web3.sha3("test_event1"),
     //         1512519349,
@@ -237,8 +250,7 @@ contract('Mevu', function(accounts) {
     //         locked.should.be.true;
                      
     //     });        
-    }); 
-    
+  
     // describe('starting and stopping contract -- ', function () {
        
     //     it ("should let owner start/re-start contract", async function() {                            
@@ -252,9 +264,7 @@ contract('Mevu', function(accounts) {
     //     });
     // });
 
-    describe('making wagers -- ', function () {
-
-      
+    describe('making wagers -- ', function () {      
         it ("it should let anyone make a wager", async function () {
             let balanceA =  web3.eth.getBalance(accounts[0]).valueOf();
             await wagersController.makeWager(web3.sha3("wager1") , 10000000000000000, web3.sha3("test_event2"), 100, 1, {value:10000000000000000}).should.be.fulfilled;
@@ -299,13 +309,11 @@ contract('Mevu', function(accounts) {
     //         let settled = await wagers.getSettled(web3.sha3("wager"));
     //         settled.should.be.true;           
     //     });
-     });
+    });
   
 
 
-    // describe('settling wagers -- ', function () {       
- 
-     
+    // describe('settling wagers -- ', function () {    
 
     // });
 
@@ -321,10 +329,8 @@ contract('Mevu', function(accounts) {
 
     describe('starting oraclize recursion -- ', function () {   
         
-        it ("should let owner start/re-start contract", async function() {
-                              
-            await mevu.restartContract(1,{value:1000000000000}).should.be.fulfilled;
-                                  
+        it ("should let owner start/re-start contract", async function() {                              
+            await mevu.restartContract(1,{value:1000000000000}).should.be.fulfilled;                                  
         });   
 
         it("should not let a non owner pause contract", async function () {
@@ -345,7 +351,7 @@ contract('Mevu', function(accounts) {
         });
         
         it ("should make a recently finished event voteReady", async function() {
-            wait(14000);
+            wait(28000);
             let voteReady = await events.getVoteReady(web3.sha3("test_event2"));
             voteReady.should.equal(true); 
             let locked = await events.getLocked(web3.sha3("test_event2"));
@@ -361,8 +367,7 @@ contract('Mevu', function(accounts) {
         });
 
         it ("should let taker vote and do nothing if they disagree", async function () {
-           let balance = web3.eth.getBalance(accounts[2]).valueOf();
-           
+           let balance = web3.eth.getBalance(accounts[2]).valueOf();           
            
             await wagersController.submitVote(web3.sha3("wager2") , 2, {from:accounts[3]}).should.be.fulfilled;
             let vote = await wagers.getTakerWinVote(web3.sha3("wager2"));
@@ -398,12 +403,12 @@ contract('Mevu', function(accounts) {
             await oraclesController.registerOracle (web3.sha3("test_event2"), 10000000, 2, {from: accounts[3]}).should.be.fulfilled;
             await oraclesController.registerOracle (web3.sha3("test_event2"), 1000000, 1, {from: accounts[4]}).should.be.fulfilled;
             await oraclesController.registerOracle (web3.sha3("test_event2"), 10, 1).should.be.rejectedWith(EVMRevert);
-            
 
+           await oraclesController.registerOracle (web3.sha3("test_event3"), 100000, 1, {from: accounts[4]}).should.be.fulfilled;
         });
 
         it ("should make a voteReady event locked after another interval", async function() {
-            wait(25000);
+            wait(39000);
             let locked = await events.getLocked(web3.sha3("test_event2"));
             locked.should.equal(true);   
                
@@ -415,10 +420,7 @@ contract('Mevu', function(accounts) {
         });
 
         it ("should let winner vote again after disagreement to claim win", async function () {
-          
-
-            await wagersController.submitVote(web3.sha3("wager2") , 1, {from:accounts[2], gasPrice:2000000000}).should.be.fulfilled;
-          
+            await wagersController.submitVote(web3.sha3("wager2") , 1, {from:accounts[2], gasPrice:2000000000}).should.be.fulfilled;          
         });
 
         it ("should update rewards contract after oracle win claim", async function () {
@@ -427,7 +429,6 @@ contract('Mevu', function(accounts) {
             uBal.valueOf().should.equal('19400000000000000');
             bal.valueOf().should.equal('19400000000000000');
         });
-
         
         it ("should let winner withdraw after claiming win", async function () {
             let balance = web3.eth.getBalance(accounts[2]).valueOf();         
@@ -435,12 +436,10 @@ contract('Mevu', function(accounts) {
             let newBal = web3.eth.getBalance(accounts[2]).valueOf();
             let diff = newBal - balance; 
             //console.log("Balance: " + balance + " NewBal: " + newBal);
-            diff.should.be.within(19000000000000000, 21000000000000000);
-           
+            diff.should.be.within(19000000000000000, 21000000000000000);           
         });
 
-        it ("should let oracles claim rewards", async function () {
-            
+        it ("should let oracles claim rewards", async function () {            
             let oUnlMvuBal0 = await rewards.getUnlockedMvuBalance(accounts[0]);            
             let oMvuBal0 = await rewards.getMvuBalance(accounts[0]);            
             let rep0 = await rewards.getOracleRep(accounts[0]);          
@@ -455,12 +454,10 @@ contract('Mevu', function(accounts) {
             await oraclesController.claimReward(web3.sha3("test_event2"), {from: accounts[1]}).should.be.fulfilled;
             await oraclesController.claimReward(web3.sha3("test_event2"), {from: accounts[2]}).should.be.fulfilled;
             await oraclesController.claimReward(web3.sha3("test_event2"), {from: accounts[3]}).should.be.fulfilled;
-            await oraclesController.claimReward(web3.sha3("test_event2"), {from: accounts[4]}).should.be.fulfilled;     
-            
-            
+            await oraclesController.claimReward(web3.sha3("test_event2"), {from: accounts[4]}).should.be.fulfilled;             
         });
-        it ("should calculate rewards properly", async function () {
 
+        it ("should calculate rewards properly", async function () {
             let oUnlMvuBal0 = await rewards.getUnlockedMvuBalance(accounts[0]);            
             let oMvuBal0 = await rewards.getMvuBalance(accounts[0]);            
             let rep0 = await rewards.getOracleRep(accounts[0]);          
@@ -472,6 +469,13 @@ contract('Mevu', function(accounts) {
             rep0.valueOf().should.equal('1');
         });
 
+        it ("should let oracle claim refund if not enough oralces", async function () {
+            console.log (await rewards.getMvuBalance(accounts[4]));
+            await oraclesController.claimRefund(web3.sha3("test_event3"), {from: accounts[4]}).should.be.fulfilled;
+            let winner = await events.getWinner(web3.sha3("test_event3"));
+            console.log("winner: " + winner);            
+        });
+
     });
 
     function wait(ms){
@@ -480,10 +484,5 @@ contract('Mevu', function(accounts) {
         while(end < start + ms) {
           end = new Date().getTime();
        }
-     }
-
-
-
-  
-
+    }
 });

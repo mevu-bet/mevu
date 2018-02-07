@@ -24,7 +24,7 @@ contract Mevu is Ownable, usingOraclize {
     bool  contractPaused = false;
     bool  randomNumRequired = false;
     bool settlementPeriod = false;
-    uint lastIteratedIndex = 0;  
+    int lastIteratedIndex = -1;  
     uint  mevuBalance = 0;
     uint  lotteryBalance = 0;    
    
@@ -63,7 +63,7 @@ contract Mevu is Ownable, usingOraclize {
 
     // Constructor 
     function Mevu () payable { 
-        //OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);                  
+        OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);                
         mevuWallet = msg.sender;
         newMonth = block.timestamp + monthSeconds;       
     }
@@ -115,17 +115,19 @@ contract Mevu is Ownable, usingOraclize {
              address potentialWinner = oracles.getOracleListAt(randomNumber);
              payoutLottery(potentialWinner);
         } else {             
-            
-            if (lastIteratedIndex == events.getActiveEventsLength() || events.getActiveEventsLength() == 0) {               
-                lastIteratedIndex = 0;
+            bytes32 queryId;  
+            if (lastIteratedIndex == -1) {               
+               //events.determineEventStage(events.getActiveEventId(lastIteratedIndex), lastIteratedIndex);
+                lastIteratedIndex = int(events.getActiveEventsLength()-1);
+                
                 //checkLottery();
                 newOraclizeQuery("Last active event processed, callback being set for admin interval.");
                 queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "", admin.getCallbackGasLimit());
                 validIds[queryId] = true; 
             } else {
-                events.determineEventStage(events.getActiveEventId(lastIteratedIndex), lastIteratedIndex);               
-                bytes32 queryId;   
-                lastIteratedIndex ++;
+                events.determineEventStage(events.getActiveEventId(uint(lastIteratedIndex)), uint(lastIteratedIndex));               
+               
+                lastIteratedIndex --;
                 newOraclizeQuery("Not done yet, querying right away again."); 
                 queryId = oraclize_query("URL", "", admin.getCallbackGasLimit());
                 validIds[queryId] = true;        
@@ -228,6 +230,7 @@ contract Mevu is Ownable, usingOraclize {
         payable
     {            
         contractPaused = false;
+        lastIteratedIndex = int(events.getActiveEventsLength()-1);
         newOraclizeQuery("Starting contract!");
         bytes32 queryId = oraclize_query(secondsFromNow, "URL", "", admin.getCallbackGasLimit());
         validIds[queryId] = true;          
@@ -235,6 +238,10 @@ contract Mevu is Ownable, usingOraclize {
 
     function addMevuBalance (uint amount) external onlyAuth {
         mevuBalance += amount;
+    }
+
+    function addEventToIterator () external onlyAuth {
+        lastIteratedIndex++;
     }
 
     function addLotteryBalance (uint amount) external onlyAuth {
@@ -261,7 +268,7 @@ contract Mevu is Ownable, usingOraclize {
         mvuToken.transferFrom(oracle, this, mvuStake);       
     }
 
-    function transferTokensFromMevu (address oracle, uint mvuStake) internal {
+    function transferTokensFromMevu (address oracle, uint mvuStake) onlyAuth {
         mvuToken.transfer(oracle, mvuStake);       
     }
 

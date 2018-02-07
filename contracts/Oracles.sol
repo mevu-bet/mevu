@@ -25,6 +25,7 @@ contract Oracles is Ownable {
 
     uint oracleServiceFee = 3; //Percent
     mapping (address => mapping(bytes32 => bool)) rewardClaimed;
+    mapping (address => mapping(bytes32 => bool)) refundClaimed;
     mapping (address => mapping(bytes32 => bool)) alreadyRegistered;
     mapping (address => bool) private isAuthorized;         
     mapping (address => mapping (bytes32 => OracleStruct)) oracleStructs; 
@@ -88,6 +89,10 @@ contract Oracles is Ownable {
         lastEventOraclized[oracle] = eventId;
     }
 
+    function setRefunded (address oracle, bytes32 eventId) onlyAuth {
+       refundClaimed[oracle][eventId] = true; 
+    }
+
     function setRegistered (address oracle, bytes32 eventId) onlyAuth {
        alreadyRegistered[oracle][eventId] = true; 
     }
@@ -102,6 +107,10 @@ contract Oracles is Ownable {
 
     function getPaid (bytes32 eventId, address oracle)  view returns (bool) {
         return oracleStructs[oracle][eventId].paid;
+    }
+
+    function getRefunded (bytes32 eventId, address oracle) view returns (bool) {
+        return refundClaimed[oracle][eventId];
     }
 
     function getVotesForOne (bytes32 eventId) view returns (uint) {

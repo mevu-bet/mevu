@@ -2,10 +2,12 @@ pragma solidity ^0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Oracles.sol";
 import "./Admin.sol";
+import "./Mevu.sol";
 contract Events is Ownable {
 
     Admin admin;
     Oracles oracles;
+    Mevu mevu;
 
     struct StandardWagerEvent {        
         bytes32 name;       
@@ -49,7 +51,11 @@ contract Events is Ownable {
 
     function setAdminContract (address thisAddr) external onlyOwner {
         admin = Admin(thisAddr);
-    }   
+    }
+
+    function setMevuContract (address thisAddr) external onlyOwner {
+        mevu = Mevu(thisAddr);
+    }     
        
 
      /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
@@ -88,7 +94,8 @@ contract Events is Ownable {
                                         false);
         standardEvents[id] = thisEvent;
         eventsCount++;
-        activeEvents.push(id);     
+        activeEvents.push(id);
+        mevu.addEventToIterator();     
     }
 
     function addResolvedWager (bytes32 eventId, uint value) {
@@ -112,7 +119,7 @@ contract Events is Ownable {
     }
 
     function decideWinner (bytes32 eventId) internal {
-        //require (oracles.getOracleVotesNum(eventId) >= admin.getMinOracleNum(eventId));
+      
         uint teamOneCount = oracles.getVotesForOne(eventId);
         uint teamTwoCount = oracles.getVotesForTwo(eventId);
         uint tieCount = oracles.getVotesForThree(eventId);    
@@ -129,6 +136,9 @@ contract Events is Ownable {
                 }
             }
         }
+          if (oracles.getOracleVotesNum(eventId) < admin.getMinOracleNum(eventId)){
+             setWinner(eventId, 0); // No clear winner
+         }
     }     
 
 
