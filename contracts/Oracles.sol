@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract Oracles is Ownable {  
@@ -23,39 +23,39 @@ contract Oracles is Ownable {
         address[] oracles;  
     }
 
-    uint oracleServiceFee = 3; //Percent
-    mapping (address => mapping(bytes32 => bool)) rewardClaimed;
-    mapping (address => mapping(bytes32 => bool)) refundClaimed;
-    mapping (address => mapping(bytes32 => bool)) alreadyRegistered;
+    uint private oracleServiceFee = 3; //Percent
+    mapping (address => mapping(bytes32 => bool)) private rewardClaimed;
+    mapping (address => mapping(bytes32 => bool)) private refundClaimed;
+    mapping (address => mapping(bytes32 => bool)) private alreadyRegistered;
     mapping (address => bool) private isAuthorized;         
-    mapping (address => mapping (bytes32 => OracleStruct)) oracleStructs; 
-    mapping (bytes32 => EventStruct) eventStructs;   
-    mapping (address => bytes32) lastEventOraclized;    
-    address[] oracleList; // List of people who have ever registered as an oracle    
-    address[] correctOracles;
-    bytes32[] correctStructs;
+    mapping (address => mapping (bytes32 => OracleStruct)) private oracleStructs; 
+    mapping (bytes32 => EventStruct) private eventStructs;   
+    mapping (address => bytes32) private lastEventOraclized;    
+    address[] private oracleList; // List of people who have ever registered as an oracle    
+    address[] private correctOracles;
+    bytes32[] private correctStructs;
 
     modifier onlyAuth () {
         require(isAuthorized[msg.sender]);               
                 _;
     }      
     
-    function grantAuthority (address nowAuthorized) onlyOwner {
+    function grantAuthority (address nowAuthorized) external onlyOwner {
         isAuthorized[nowAuthorized] = true;
     }
 
-    function removeAuthority (address unauthorized) onlyOwner {
+    function removeAuthority (address unauthorized) external onlyOwner {
         isAuthorized[unauthorized] = false;
     }  
 
-    function removeOracle (address oracle, bytes32 eventId) onlyAuth {
+    function removeOracle (address oracle, bytes32 eventId) external onlyAuth {
         OracleStruct memory thisOracle;
         bytes32 empty;         
         thisOracle = OracleStruct (empty,0,0, false);               
         oracleStructs[oracle][eventId] = thisOracle;    
     }
 
-    function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote) onlyAuth {
+    function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote) external onlyAuth {
         OracleStruct memory thisOracle; 
         thisOracle = OracleStruct (eventId, mvuStake, winnerVote, false);      
         oracleStructs[oracle][eventId] = thisOracle;
@@ -77,67 +77,67 @@ contract Oracles is Ownable {
     }  
 
 
-    function addToOracleList (address oracle) onlyAuth {
+    function addToOracleList (address oracle) external onlyAuth {
         oracleList.push(oracle);
     } 
 
-    function setPaid (address oracle, bytes32 eventId) onlyAuth {
+    function setPaid (address oracle, bytes32 eventId) external onlyAuth {
         oracleStructs[oracle][eventId].paid = true;
     }  
 
-    function setLastEventOraclized (address oracle, bytes32 eventId) onlyAuth {
+    function setLastEventOraclized (address oracle, bytes32 eventId) external onlyAuth {
         lastEventOraclized[oracle] = eventId;
     }
 
-    function setRefunded (address oracle, bytes32 eventId) onlyAuth {
+    function setRefunded (address oracle, bytes32 eventId) external onlyAuth {
        refundClaimed[oracle][eventId] = true; 
     }
 
-    function setRegistered (address oracle, bytes32 eventId) onlyAuth {
+    function setRegistered (address oracle, bytes32 eventId) external onlyAuth {
        alreadyRegistered[oracle][eventId] = true; 
     }
 
-    function getRegistered (address oracle, bytes32 eventId) view returns (bool) {
+    function getRegistered (address oracle, bytes32 eventId) external view returns (bool) {
        return alreadyRegistered[oracle][eventId];
     }
 
-    function getWinnerVote(bytes32 eventId, address oracle)  view returns (uint) {
+    function getWinnerVote(bytes32 eventId, address oracle) external view returns (uint) {
         return oracleStructs[oracle][eventId].winnerVote;
     }
 
-    function getPaid (bytes32 eventId, address oracle)  view returns (bool) {
+    function getPaid (bytes32 eventId, address oracle) external view returns (bool) {
         return oracleStructs[oracle][eventId].paid;
     }
 
-    function getRefunded (bytes32 eventId, address oracle) view returns (bool) {
+    function getRefunded (bytes32 eventId, address oracle) external view returns (bool) {
         return refundClaimed[oracle][eventId];
     }
 
-    function getVotesForOne (bytes32 eventId) view returns (uint) {
+    function getVotesForOne (bytes32 eventId) external view returns (uint) {
         return eventStructs[eventId].votesForOne;
     }
 
-    function getVotesForTwo (bytes32 eventId) view returns (uint) {
+    function getVotesForTwo (bytes32 eventId) external view returns (uint) {
         return eventStructs[eventId].votesForTwo;
     }    
 
-    function getVotesForThree (bytes32 eventId) view returns (uint) {
+    function getVotesForThree (bytes32 eventId) external view returns (uint) {
         return eventStructs[eventId].votesForThree;
     } 
 
-    function getStakeForOne (bytes32 eventId) view returns (uint) {
+    function getStakeForOne (bytes32 eventId) external view returns (uint) {
         return eventStructs[eventId].stakeForOne;
     }
 
-    function getStakeForTwo (bytes32 eventId) view returns (uint) {
+    function getStakeForTwo (bytes32 eventId) external view returns (uint) {
         return eventStructs[eventId].stakeForTwo;
     } 
 
-    function getStakeForThree (bytes32 eventId) view returns (uint) {
+    function getStakeForThree (bytes32 eventId) external view returns (uint) {
         return eventStructs[eventId].stakeForThree;
     }  
 
-    function getMvuStake (bytes32 eventId, address oracle) view returns (uint) {
+    function getMvuStake (bytes32 eventId, address oracle) external view returns (uint) {
         return oracleStructs[oracle][eventId].mvuStake;
     }
    
@@ -145,7 +145,7 @@ contract Oracles is Ownable {
         return eventStructs[eventId].oracles.length;
     }
     
-    function getOracleVotesNum (bytes32 eventId) view returns (uint) {
+    function getOracleVotesNum (bytes32 eventId) external view returns (uint) {
         return eventStructs[eventId].oracleVotes;
     }   
 
@@ -153,15 +153,15 @@ contract Oracles is Ownable {
         return eventStructs[eventId].totalOracleStake;
     }
  
-    function getOracleListLength()  view returns (uint) {
+    function getOracleListLength() external  view returns (uint) {
         return oracleList.length;
     }
 
-    function getOracleListAt (uint index)  view returns (address) {
+    function getOracleListAt (uint index) external view returns (address) {
         return oracleList[index];
     }
 
-    function getLastEventOraclized (address oracle) view returns (bytes32) {
+    function getLastEventOraclized (address oracle) external view returns (bytes32) {
         return lastEventOraclized[oracle];
     }  
 

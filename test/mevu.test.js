@@ -3,6 +3,8 @@ const Events = artifacts.require("../build/Events.sol");
 const Admin = artifacts.require("../build/Admin.sol");
 const Wagers = artifacts.require("../build/Wagers.sol");
 const WagersController = artifacts.require("../build/WagersController.sol");
+const CustomWagers = artifacts.require("../build/CustomWagers.sol");
+const CustomWagersController = artifacts.require("../build/CustomWagersController.sol");
 const Rewards = artifacts.require("../build/Rewards.sol");
 const Oracles = artifacts.require("../build/Oracles.sol");
 const OraclesController = artifacts.require("../build/OraclesController.sol");
@@ -33,6 +35,8 @@ contract('Mevu', function(accounts) {
    let oraclesController;
    let wagers;
    let wagersController;
+   let customWagers;
+   let customWagersController;
    let oracleVerif;
    let mvuToken; 
    let initialFund = 100000000000000000;
@@ -41,12 +45,16 @@ contract('Mevu', function(accounts) {
    let balanceB;
    let balanceC;
 
+   let afterEventFinished = 1518839239;
+
     beforeEach('setup contract for each test', async function () {
        mevu = await Mevu.deployed();
        events = await Events.deployed();
        admin = await Admin.deployed();
        wagers = await Wagers.deployed();
        wagersController = await WagersController.deployed();
+       customWagers = await CustomWagers.deployed();
+       customWagersController = await CustomWagersController.deployed();
 
        oracleVerif = await OracleVerifier.deployed();
        rewards = await Rewards.deployed();
@@ -80,11 +88,17 @@ contract('Mevu', function(accounts) {
             await mevu.setWagersContract(wagers.address).should.be.fulfilled;  
         });
 
+        it ("should let owner set CustomWagers address", async function() {
+            await customWagersController.setCustomWagersContract(customWagers.address).should.be.fulfilled;
+            //await mevu.setWagersContract(wagers.address).should.be.fulfilled;  
+        });
+
         it ("should let owner set Admin address", async function() {
             await oraclesController.setAdminContract(admin.address).should.be.fulfilled;
-            await wagersController.setAdminContract(admin.address).should.be.fulfilled; 
+            await wagersController.setAdminContract(admin.address).should.be.fulfilled;
+            await customWagersController.setAdminContract(admin.address).should.be.fulfilled;  
             await mevu.setAdminContract(admin.address).should.be.fulfilled;
-            events.setAdminContract(admin.address).should.be.fulfilled;
+            await events.setAdminContract(admin.address).should.be.fulfilled;
         });
 
         it ("should let owner set Oracles address", async function() {
@@ -93,16 +107,14 @@ contract('Mevu', function(accounts) {
             await events.setOraclesContract(oracles.address).should.be.fulfilled; 
 
         });
-
-        // it ("should let owner set OraclesController address", async function() {
-        //     await wagersController.setWagersContract(wagers.address).should.be.fulfilled; 
-        // });
+      
 
         it ("should let owner set OracleVerifier address", async function() {
             await oraclesController.setOracleVerifContract(oracleVerif.address).should.be.fulfilled; 
         });
 
         it ("should let owner set Mevu address", async function() {
+            await customWagersController.setMevuContract(mevu.address).should.be.fulfilled;
             await wagersController.setMevuContract(mevu.address).should.be.fulfilled; 
             await oraclesController.setMevuContract(mevu.address).should.be.fulfilled;
             await events.setMevuContract(mevu.address).should.be.fulfilled; 
@@ -110,6 +122,7 @@ contract('Mevu', function(accounts) {
 
 
         it ("should let owner set Rewards address", async function() {
+            await customWagersController.setRewardsContract(rewards.address).should.be.fulfilled;
             await wagersController.setRewardsContract(rewards.address).should.be.fulfilled;
             await oraclesController.setRewardsContract(rewards.address).should.be.fulfilled;
             await mevu.setRewardsContract(rewards.address).should.be.fulfilled; 
@@ -159,6 +172,7 @@ contract('Mevu', function(accounts) {
     describe('granting authority -- ', function () {
         it ("should let owner grant authority for Rewards", async function() {
             await rewards.grantAuthority(wagersController.address).should.be.fulfilled;
+            await rewards.grantAuthority(customWagersController.address).should.be.fulfilled;
             await rewards.grantAuthority(oraclesController.address).should.be.fulfilled;
             await rewards.grantAuthority(mevu.address).should.be.fulfilled;                
         });
@@ -170,6 +184,10 @@ contract('Mevu', function(accounts) {
         it ("should let owner grant authority for Wagers", async function() {
             await wagers.grantAuthority(wagersController.address).should.be.fulfilled;
             await wagers.grantAuthority(mevu.address).should.be.fulfilled;                
+        });
+        it ("should let owner grant authority for CustomWagers", async function() {
+            await customWagers.grantAuthority(customWagersController.address).should.be.fulfilled;
+                        
         });
         it ("should let owner grant authority for Oracles", async function() {
             await oracles.grantAuthority(oraclesController.address).should.be.fulfilled;               
@@ -277,11 +295,23 @@ contract('Mevu', function(accounts) {
             await wagersController.makeWager(web3.sha3("wager2") , 10000000000000000, web3.sha3("test_event2"), 100, 1, {from:accounts[2], value:10000000000000000}).should.be.fulfilled;
         });
 
-        it ("should update rewwards contract", async function () {
+        it ("it should let anyone make a custom wager with no judge", async function () {
+            let balanceA =  web3.eth.getBalance(accounts[0]).valueOf();
+            await customWagersController.makeWager(web3.sha3("wager1"), 1518182608 ,1, 10000000000000000, 100, '0x0000000000000000000000000000000000000000', {value:10000000000000000}).should.be.fulfilled;
+            let maker = await customWagers.getMaker(web3.sha3("wager1"));
+            maker.should.equal(accounts[0]);
+            let newBalance =  web3.eth.getBalance(accounts[0]).valueOf();
+            let diff = balanceA - newBalance;
+            diff.should.be.above(10000000000000000);
+
+            //await wagersController.makeWager(web3.sha3("wager2") , 10000000000000000, web3.sha3("test_event2"), 100, 1, {from:accounts[2], value:10000000000000000}).should.be.fulfilled;
+        });
+
+        it ("should update rewards contract", async function () {
             let bal = await rewards.getEthBalance(accounts[0]).should.be.fulfilled;
             let uBal = await rewards.getUnlockedEthBalance(accounts[0]).should.be.fulfilled;
             uBal.valueOf().should.equal('0');
-            bal.valueOf().should.equal('10000000000000000');
+            bal.valueOf().should.equal('20000000000000000');
         });
 
         it ("it should let anyone take a wager", async function () {
@@ -351,7 +381,7 @@ contract('Mevu', function(accounts) {
         });
         
         it ("should make a recently finished event voteReady", async function() {
-            wait(28000);
+            wait(28000);          
             let voteReady = await events.getVoteReady(web3.sha3("test_event2"));
             voteReady.should.equal(true); 
             let locked = await events.getLocked(web3.sha3("test_event2"));

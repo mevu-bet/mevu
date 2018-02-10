@@ -1,29 +1,29 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
 contract Admin is Ownable {   
     mapping (address => bool) private isAuthorized;    
-    uint minWagerAmount = 10;
-    uint callbackInterval = 1;
-    uint minOracleStake = 1;
-    uint maxOracleInterval= 604800; //Time in seconds allowed since the last event an oracle service was performed (to win lottery)
-    uint callbackGasLimit = 900000;
-    int oracleRepPenalty = 4;
-    int oracleRepReward = 1;
-    int playerAgreeRepReward = 1;
-    mapping (bytes32 => uint) minOracleNum;   
+    uint private minWagerAmount = 10;
+    uint private callbackInterval = 1;
+    uint private minOracleStake = 1;
+    uint private maxOracleInterval= 604800; //Time in seconds allowed since the last event an oracle service was performed (to win lottery)
+    uint private callbackGasLimit = 900000;
+    int private oracleRepPenalty = 4;
+    int private oracleRepReward = 1;
+    int private playerAgreeRepReward = 1;
+    mapping (bytes32 => uint) private minOracleNum;   
     
     modifier onlyAuth () {
         require(isAuthorized[msg.sender]);               
         _;
     }
 
-    function grantAuthority (address nowAuthorized) onlyOwner {
+    function grantAuthority (address nowAuthorized) external onlyOwner {
         isAuthorized[nowAuthorized] = true;
     }
 
-    function removeAuthority (address unauthorized) onlyOwner {
+    function removeAuthority (address unauthorized) external onlyOwner {
         isAuthorized[unauthorized] = false;
     }
 

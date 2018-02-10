@@ -1,13 +1,13 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Oracles.sol";
 import "./Admin.sol";
 import "./Mevu.sol";
 contract Events is Ownable {
 
-    Admin admin;
-    Oracles oracles;
-    Mevu mevu;
+    Admin private admin;
+    Oracles private oracles;
+    Mevu private mevu;
 
     struct StandardWagerEvent {        
         bytes32 name;       
@@ -27,8 +27,8 @@ contract Events is Ownable {
         bool cancelled;
     }
     mapping (address => bool) private isAuthorized;
-    mapping (bytes32 => StandardWagerEvent) standardEvents;
-    bytes32[] emptyBytes32Array;
+    mapping (bytes32 => StandardWagerEvent) private standardEvents;
+    bytes32[] private emptyBytes32Array;
     bytes32[] public activeEvents;
     uint public eventsCount;
 
@@ -98,11 +98,11 @@ contract Events is Ownable {
         mevu.addEventToIterator();     
     }
 
-    function addResolvedWager (bytes32 eventId, uint value) {
+    function addResolvedWager (bytes32 eventId, uint value) external onlyAuth {
         standardEvents[eventId].totalAmountResolvedWithoutOracles += value;
     }
 
-    function determineEventStage (bytes32 thisEventId, uint lastIndex) onlyAuth {
+    function determineEventStage (bytes32 thisEventId, uint lastIndex) external onlyAuth {
         
         uint eventEndTime = getStart(thisEventId) + getDuration(thisEventId);
         if (block.timestamp > eventEndTime){
@@ -118,8 +118,7 @@ contract Events is Ownable {
         }
     }
 
-    function decideWinner (bytes32 eventId) internal {
-      
+    function decideWinner (bytes32 eventId) internal {      
         uint teamOneCount = oracles.getVotesForOne(eventId);
         uint teamTwoCount = oracles.getVotesForTwo(eventId);
         uint tieCount = oracles.getVotesForThree(eventId);    
@@ -142,7 +141,7 @@ contract Events is Ownable {
     }     
 
 
-    function removeEventFromActive (bytes32 eventId) { 
+    function removeEventFromActive (bytes32 eventId) internal { 
         uint indexToDelete = standardEvents[eventId].activeEventIndex;
         uint lastItem = activeEvents.length - 1;
         activeEvents[indexToDelete] = activeEvents[lastItem]; // Write over item to delete with last item
@@ -160,11 +159,11 @@ contract Events is Ownable {
         standardEvents[eventId].totalAmountBet += value;
     }
 
-    function setWinner (bytes32 eventId, uint winner) onlyAuth {
+    function setWinner (bytes32 eventId, uint winner) public onlyAuth {
         standardEvents[eventId].winner = winner;        
     }  
     
-    function setLocked (bytes32 eventId) onlyAuth {
+    function setLocked (bytes32 eventId) public onlyAuth {
         standardEvents[eventId].locked = true;        
     }
   
@@ -180,11 +179,11 @@ contract Events is Ownable {
         return eventsCount;
     }   
 
-    function getTotalAmountBet (bytes32 eventId) view returns (uint) {
+    function getTotalAmountBet (bytes32 eventId) external view returns (uint) {
         return standardEvents[eventId].totalAmountBet;
     }
 
-    function getTotalAmountResolvedWithoutOracles (bytes32 eventId) view returns (uint) {
+    function getTotalAmountResolvedWithoutOracles (bytes32 eventId) external view returns (uint) {
         return standardEvents[eventId].totalAmountResolvedWithoutOracles;
     }
 
@@ -192,19 +191,19 @@ contract Events is Ownable {
         return standardEvents[id].cancelled;
     }
 
-    function getStart (bytes32 id) view returns (uint) {
+    function getStart (bytes32 id) public view returns (uint) {
         return standardEvents[id].startTime;
     }
 
-    function getDuration (bytes32 id) view returns (uint) {
+    function getDuration (bytes32 id) public view returns (uint) {
         return standardEvents[id].duration;
     }
 
-    function getEndTime (bytes32 id) view returns (uint) {
+    function getEndTime (bytes32 id) external view returns (uint) {
         return (standardEvents[id].startTime + standardEvents[id].duration);
     }
 
-    function getLocked(bytes32 id) view returns (bool) {
+    function getLocked(bytes32 id) external view returns (bool) {
         return standardEvents[id].locked;
     }
 

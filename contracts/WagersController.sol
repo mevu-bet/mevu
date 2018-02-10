@@ -1,5 +1,5 @@
 
-pragma solidity ^0.4.18;
+pragma solidity 0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Admin.sol"; 
 import "./Wagers.sol"; 
@@ -282,6 +282,51 @@ contract WagersController is Ownable {
         //playerFunds -= eth;
         mevu.transferEth(msg.sender, eth);         
     }
+
+    //     function cancelWager (
+    //     bytes32 wagerId, 
+    //     bool withdraw
+    // ) 
+    //     onlyBettor(wagerId)
+    //     notPaused
+    //     notTaken(wagerId)
+    //     wagerUnlocked(wagerId) 
+    // {          
+    //     wagers.setLocked(wagerId);
+    //     wagers.setSettled(wagerId);                   
+    //     if (withdraw) {
+    //         rewards.subEth(msg.sender, wagers.getOrigValue(wagerId));                
+    //         msg.sender.transfer (wagers.getOrigValue(wagerId));
+    //     } else {
+    //         rewards.addUnlockedEth(msg.sender, wagers.getOrigValue(wagerId));
+    //     }            
+    // }
+
+    // function requestWagerCancel(bytes32 wagerId) 
+    //     mustBeTaken(wagerId) 
+    //     notSettled(wagerId) 
+    // {       
+    //     if (msg.sender == wagers.getTaker(wagerId)) {
+    //         if (wagers.getMakerCancelRequest(wagerId)) {            
+    //             wagers.setSettled(wagerId);
+    //             events.removeWager(wagers.getEventId(wagerId), wagers.getWinningValue(wagerId));                
+    //             rewards.addUnlockedEth(wagers.getMaker(wagerId), wagers.getOrigValue(wagerId)); 
+    //             rewards.addUnlockedEth(wagers.getTaker(wagerId),  (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
+    //         } else {
+    //             wagers.setTakerCancelRequest(wagerId);
+    //         }
+    //     }
+    //     if (msg.sender ==  wagers.getMaker(wagerId)) {
+    //         if (wagers.getTakerCancelRequest(wagerId)) {            
+    //             wagers.setSettled(wagerId);
+    //             events.removeWager(wagers.getEventId(wagerId), wagers.getWinningValue(wagerId));              
+    //             rewards.addUnlockedEth(wagers.getMaker(wagerId), wagers.getOrigValue(wagerId));
+    //             rewards.addUnlockedEth(wagers.getTaker(wagerId),  (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
+    //         } else {
+    //             wagers.setMakerCancelRequest(wagerId);
+    //         }
+    //     }        
+    // }
     
         
 

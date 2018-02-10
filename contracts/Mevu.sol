@@ -1,6 +1,6 @@
 
 
-pragma solidity ^0.4.18; 
+pragma solidity 0.4.18; 
 
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../ethereum-api/usingOraclize.sol";
@@ -13,32 +13,31 @@ import "./MvuToken.sol";
 
 contract Mevu is Ownable, usingOraclize {
 
-    address mevuWallet;
-    Events events;
-    Admin admin;
-    Oracles oracles;
-    Rewards rewards;   
-    MvuToken mvuToken;
-    Wagers wagers;
+    address private mevuWallet;
+    Events private events;
+    Admin private admin;
+    Oracles private oracles;
+    Rewards private rewards;   
+    MvuToken private mvuToken;
+    Wagers private wagers;
     
-    bool  contractPaused = false;
-    bool  randomNumRequired = false;
-    bool settlementPeriod = false;
-    int lastIteratedIndex = -1;  
-    uint  mevuBalance = 0;
-    uint  lotteryBalance = 0;    
+    bool public contractPaused = false;
+    bool private randomNumRequired = false;  
+    int private lastIteratedIndex = -1;  
+    uint private mevuBalance = 0;
+    uint public lotteryBalance = 0;    
    
-    uint oracleServiceFee = 3; //Percent
+    uint private oracleServiceFee = 3; //Percent
     //  TODO: Set equal to launch date + one month in unix epoch seocnds
-    uint  newMonth = 1515866437;
-    uint  monthSeconds = 2592000;
+    uint public newMonth = 1515866437;
+    uint private monthSeconds = 2592000;
     uint public playerFunds;  
        
-    mapping (bytes32 => bool) validIds;
-    mapping (address => bool) abandoned;
+    mapping (bytes32 => bool) private validIds;
+    mapping (address => bool) private abandoned;
     mapping (address => bool) private isAuthorized;
     
-    event newOraclizeQuery (string description);  
+    event NewOraclizeQuery (string description);  
 
     modifier notPaused() {
         require (!contractPaused);
@@ -104,7 +103,7 @@ contract Mevu is Ownable, usingOraclize {
         mvuToken = MvuToken(thisAddr);
     } 
   
-    function __callback (bytes32 myid, string result) notPaused {        
+    function __callback (bytes32 myid, string result)  notPaused {        
          require(validIds[myid]);
          require(msg.sender == oraclize_cbAddress());      
        
@@ -121,21 +120,21 @@ contract Mevu is Ownable, usingOraclize {
                 lastIteratedIndex = int(events.getActiveEventsLength()-1);
                 
                 //checkLottery();
-                newOraclizeQuery("Last active event processed, callback being set for admin interval.");
+                NewOraclizeQuery("Last active event processed, callback being set for admin interval.");
                 queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "", admin.getCallbackGasLimit());
                 validIds[queryId] = true; 
             } else {
                 events.determineEventStage(events.getActiveEventId(uint(lastIteratedIndex)), uint(lastIteratedIndex));               
                
                 lastIteratedIndex --;
-                newOraclizeQuery("Not done yet, querying right away again."); 
+                NewOraclizeQuery("Not done yet, querying right away again."); 
                 queryId = oraclize_query("URL", "", admin.getCallbackGasLimit());
                 validIds[queryId] = true;        
             }            
         } 
     }    
 
-    function setMevuWallet (address newAddress) onlyOwner {
+    function setMevuWallet (address newAddress) external onlyOwner {
         mevuWallet = newAddress;       
     }   
    
@@ -179,7 +178,7 @@ contract Mevu is Ownable, usingOraclize {
 
     /** @dev Pays out the monthly lottery balance to a random oracle and sends the mevuWallet its accrued balance.   
       */ 
-    function payoutLottery(address potentialWinner) private { 
+    function payoutLottery(address potentialWinner) internal { 
         // TODO: add functionality to test for oracle service being provided within one mointh of block.timestamp   
         
         if (allowedToWin(potentialWinner)) {           
@@ -215,12 +214,12 @@ contract Mevu is Ownable, usingOraclize {
         } else {
             return false;
         } 
-
     }   
     
     function pauseContract() 
-        public
-        onlyOwner {
+        external
+        onlyOwner 
+    {
         contractPaused = true;    
     }
 
@@ -231,7 +230,7 @@ contract Mevu is Ownable, usingOraclize {
     {            
         contractPaused = false;
         lastIteratedIndex = int(events.getActiveEventsLength()-1);
-        newOraclizeQuery("Starting contract!");
+        NewOraclizeQuery("Starting contract!");
         bytes32 queryId = oraclize_query(secondsFromNow, "URL", "", admin.getCallbackGasLimit());
         validIds[queryId] = true;          
     }  
@@ -248,19 +247,23 @@ contract Mevu is Ownable, usingOraclize {
         lotteryBalance += amount;
     } 
 
-    function addToPlayerFunds (uint amount) onlyAuth {
+    function addToPlayerFunds (uint amount) external onlyAuth {
         playerFunds += amount;
     }
 
-    function subFromPlayerFunds (uint amount) onlyAuth {
+    function subFromPlayerFunds (uint amount) external onlyAuth {
         playerFunds -= amount;
-    }   
+    }
 
-    function getContractPaused() constant returns (bool) {
+    function transferEth (address recipient, uint amount) external onlyAuth {
+        recipient.transfer(amount);
+    }       
+
+    function getContractPaused() external view returns (bool) {
         return contractPaused;
     }     
 
-    function getOracleFee () constant returns (uint256) {
+    function getOracleFee () external view returns (uint256) {
         return oracleServiceFee;
     }
 
@@ -268,20 +271,15 @@ contract Mevu is Ownable, usingOraclize {
         mvuToken.transferFrom(oracle, this, mvuStake);       
     }
 
-    function transferTokensFromMevu (address oracle, uint mvuStake) onlyAuth {
+    function transferTokensFromMevu (address oracle, uint mvuStake) external onlyAuth {
         mvuToken.transfer(oracle, mvuStake);       
     }
-
- 
-    function transferEth (address recipient, uint amount) external onlyAuth {
-        recipient.transfer(amount);
-    }    
   
     function addMonth () internal {
         newMonth += monthSeconds;
     }  
    
-    function getNewMonth () constant returns (uint256) {
+    function getNewMonth () internal view returns (uint256) {
         return newMonth;
     }
 
@@ -291,7 +289,7 @@ contract Mevu is Ownable, usingOraclize {
        
     }
 
-    function uintToBytes(uint v) view returns (bytes32 ret) {
+    function uintToBytes(uint v) internal view returns (bytes32 ret) {
         if (v == 0) {
             ret = '0';
         }
@@ -305,7 +303,7 @@ contract Mevu is Ownable, usingOraclize {
         return ret;
     }
 
-    function bytes32ToString (bytes32 data) view returns (string) {
+    function bytes32ToString (bytes32 data) internal view returns (string) {
         bytes memory bytesString = new bytes(32);
         for (uint j=0; j<32; j++) {
             byte char = byte(bytes32(uint(data) * 2 ** (8 * j)));
