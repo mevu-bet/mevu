@@ -235,45 +235,7 @@ contract CustomWagersController is Ownable {
     }
 
 
-    function cancelWager (
-        bytes32 wagerId, 
-        bool withdraw
-    ) 
-        onlyBettor(wagerId)
-        notPaused
-        notTaken(wagerId)        
-        external 
-    {           
-        customWagers.setSettled(wagerId);                   
-        if (withdraw) {
-            rewards.subEth(msg.sender, customWagers.getOrigValue(wagerId));                
-            msg.sender.transfer (customWagers.getOrigValue(wagerId));
-        } else {
-            rewards.addUnlockedEth(msg.sender, customWagers.getOrigValue(wagerId));
-        }            
-    }
-  
-    function requestCancel (bytes32 wagerId)
-        onlyBettor(wagerId)
-        mustBeTaken(wagerId)
-        notSettled(wagerId)
-        external
-    {
-        if (msg.sender == customWagers.getTaker(wagerId)) {            
-            customWagers.setTakerCancelRequest(wagerId);
-        } else {
-            customWagers.setMakerCancelRequest(wagerId);
-        }
-    }
-  
-    function confirmCancel (bytes32 wagerId)
-        notSettled(wagerId)
-        external 
-    {
-        if (customWagers.getMakerCancelRequest(wagerId) && customWagers.getTakerCancelRequest(wagerId)) {
-           abortWager(wagerId);
-        }
-    }
+   
 
     function withdraw(
         uint eth    
