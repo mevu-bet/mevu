@@ -12,6 +12,7 @@ contract Admin is Ownable {
     int private oracleRepPenalty = 4;
     int private oracleRepReward = 1;
     int private playerAgreeRepReward = 1;
+    int private playerDisagreeRepPenalty = 4;
     mapping (bytes32 => uint) private minOracleNum;   
     
     modifier onlyAuth () {
@@ -47,9 +48,13 @@ contract Admin is Ownable {
         oracleRepReward = reward;
     }
 
-     function setPlayerAgreeRepReward (int reward) external onlyAuth {
+    function setPlayerAgreeRepReward (int reward) external onlyAuth {
         playerAgreeRepReward = reward;
-    } 
+    }
+
+    function setPlayerDisagreeRepPenalty (int penalty) external onlyAuth {
+        playerDisagreeRepPenalty = penalty;
+    }  
 
     function setCallbackGasLimit (uint newLimit) external onlyAuth {
         callbackGasLimit = newLimit;
@@ -91,6 +96,10 @@ contract Admin is Ownable {
 
     function getPlayerAgreeRepReward () external view returns (int) {
         return playerAgreeRepReward;
+    }
+
+    function getPlayerDisagreeRepPenalty () external view returns (int) {
+        return playerDisagreeRepPenalty;
     }
     
     function getOracleRepPenalty () external view returns (int) {

@@ -3,23 +3,23 @@ import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract Rewards is Ownable {
     mapping (address => bool) private isAuthorized;   
-    mapping(address => int) public playerRep;
-    mapping (address => int) public oracleRep;  
-    mapping (address => uint)  ethBalance;
-    mapping (address => uint)  mvuBalance;
-    mapping(address => uint)  unlockedEthBalance;
-    mapping (address => uint)  unlockedMvuBalance;
+    mapping(address => int) private playerRep;
+    mapping (address => int) private oracleRep;  
+    mapping (address => uint) private ethBalance;
+    mapping (address => uint) private mvuBalance;
+    mapping(address => uint) private unlockedEthBalance;
+    mapping (address => uint) private unlockedMvuBalance;
 
     modifier onlyAuth () {
         require(isAuthorized[msg.sender]);               
                 _;
     }
 
-    function grantAuthority (address nowAuthorized) onlyOwner {
+    function grantAuthority (address nowAuthorized) onlyOwner external {
         isAuthorized[nowAuthorized] = true;
     }
 
-    function removeAuthority (address unauthorized) onlyOwner {
+    function removeAuthority (address unauthorized) onlyOwner external {
         isAuthorized[unauthorized] = false;
     }
   
