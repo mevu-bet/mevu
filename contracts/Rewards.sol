@@ -1,27 +1,15 @@
 pragma solidity 0.4.18;
-import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./AuthorityGranter.sol";
 
-contract Rewards is Ownable {
-    mapping (address => bool) private isAuthorized;   
+contract Rewards is AuthorityGranter {   
     mapping(address => int) private playerRep;
     mapping (address => int) private oracleRep;  
     mapping (address => uint) private ethBalance;
     mapping (address => uint) private mvuBalance;
     mapping(address => uint) private unlockedEthBalance;
     mapping (address => uint) private unlockedMvuBalance;
-
-    modifier onlyAuth () {
-        require(isAuthorized[msg.sender]);               
-                _;
-    }
-
-    function grantAuthority (address nowAuthorized) onlyOwner external {
-        isAuthorized[nowAuthorized] = true;
-    }
-
-    function removeAuthority (address unauthorized) onlyOwner external {
-        isAuthorized[unauthorized] = false;
-    }
+  
   
     function subEth(address user, uint amount) external onlyAuth {
         ethBalance[user] -= amount;

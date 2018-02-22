@@ -73,10 +73,6 @@ contract CancelController is Ownable {
         rewards = Rewards(thisAddr);        
     }
 
-
-
-
-
     function cancelWagerStandard (
         bytes32 wagerId,
         bool withdraw      

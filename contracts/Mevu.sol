@@ -1,8 +1,8 @@
 
 
 pragma solidity 0.4.18; 
-
-import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./AuthorityGranter.sol";
+//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../ethereum-api/usingOraclize.sol";
 import "./Events.sol";
 import "./Admin.sol";
@@ -11,7 +11,7 @@ import "./Rewards.sol";
 import "./Oracles.sol";
 import "./MvuToken.sol";
 
-contract Mevu is Ownable, usingOraclize {
+contract Mevu is AuthorityGranter, usingOraclize {
 
     address private mevuWallet;
     Events private events;
@@ -28,14 +28,14 @@ contract Mevu is Ownable, usingOraclize {
     uint public lotteryBalance = 0;    
    
     uint private oracleServiceFee = 3; //Percent
-    //  TODO: Set equal to launch date + one month in unix epoch seocnds
-    uint public newMonth = 1515866437;
+    
+    uint public newMonth;
     uint private monthSeconds = 2592000;
     uint public playerFunds;  
        
     mapping (bytes32 => bool) private validIds;
     mapping (address => bool) private abandoned;
-    mapping (address => bool) private isAuthorized;
+   
     
     event NewOraclizeQuery (string description);  
 
@@ -55,11 +55,7 @@ contract Mevu is Ownable, usingOraclize {
     }
 
 
-     modifier onlyAuth () {
-        require(isAuthorized[msg.sender]);               
-                _;
-    }     
-
+ 
     // Constructor 
     function Mevu () payable { 
         OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);                
@@ -70,14 +66,6 @@ contract Mevu is Ownable, usingOraclize {
     function () payable {        
                 
     }  
-
-    function grantAuthority (address nowAuthorized) external onlyOwner {
-        isAuthorized[nowAuthorized] = true;
-    }
-
-    function removeAuthority (address unauthorized) external onlyOwner {
-        isAuthorized[unauthorized] = false;
-    }
 
     function setEventsContract (address thisAddr) external onlyOwner {
         events = Events(thisAddr);        
@@ -233,6 +221,11 @@ contract Mevu is Ownable, usingOraclize {
         NewOraclizeQuery("Starting contract!");
         bytes32 queryId = oraclize_query(secondsFromNow, "URL", "", admin.getCallbackGasLimit());
         validIds[queryId] = true;          
+    }
+
+    function mevuWithdraw (uint amount) external onlyOwner {
+        require(mevuBalance >= amount);
+        mevuWallet.transfer(amount);
     }  
 
     function addMevuBalance (uint amount) external onlyAuth {

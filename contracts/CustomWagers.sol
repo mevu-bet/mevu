@@ -1,6 +1,7 @@
 pragma solidity 0.4.18;
-import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
-contract CustomWagers is Ownable {
+//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./AuthorityGranter.sol";
+contract CustomWagers is AuthorityGranter {
         
     struct Wager {
         uint endTime;            
@@ -21,8 +22,7 @@ contract CustomWagers is Ownable {
         bool settled;        
     }
 
-    mapping (bytes32 => bool) private cancelled;
-    mapping (address => bool) private isAuthorized;  
+    mapping (bytes32 => bool) private cancelled;   
     mapping (bytes32 => Wager) private wagersMap;
     mapping (address => mapping (bytes32 => bool)) private recdRefund;
     mapping  (bytes32 => uint) private judgesVote;

@@ -1,9 +1,10 @@
 pragma solidity 0.4.18;
-import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./AuthorityGranter.sol";
 
 
-contract Admin is Ownable {   
-    mapping (address => bool) private isAuthorized;    
+contract Admin is AuthorityGranter {   
+  
     uint private minWagerAmount = 10;
     uint private callbackInterval = 1;
     uint private minOracleStake = 1;
@@ -15,18 +16,7 @@ contract Admin is Ownable {
     int private playerDisagreeRepPenalty = 4;
     mapping (bytes32 => uint) private minOracleNum;   
     
-    modifier onlyAuth () {
-        require(isAuthorized[msg.sender]);               
-        _;
-    }
-
-    function grantAuthority (address nowAuthorized) external onlyOwner {
-        isAuthorized[nowAuthorized] = true;
-    }
-
-    function removeAuthority (address unauthorized) external onlyOwner {
-        isAuthorized[unauthorized] = false;
-    }
+   
 
     function setMinOracleStake (uint newMin) external onlyAuth {
         minOracleStake = newMin;

@@ -181,8 +181,8 @@ contract CustomWagersController is Ownable {
         uint fee = (payoutValue/100) * 2; // Sevice fee is 2 percent
         uint makerWinVote = customWagers.getMakerWinVote(wagerId);
         payoutValue -= fee; 
-         mevu.addMevuBalance(3*(fee/4)); 
-         mevu.addLotteryBalance(fee/8);
+        mevu.addMevuBalance(3*(fee/4)); 
+        mevu.addLotteryBalance(fee/8);
         if (makerWinVote == customWagers.getTakerWinVote(wagerId)) {
             if (makerWinVote == customWagers.getMakerChoice(wagerId)) {
                 customWagers.setWinner(wagerId, maker);
@@ -227,9 +227,11 @@ contract CustomWagersController is Ownable {
                 customWagers.setWinner(wagerId, taker);
                 customWagers.setLoser(wagerId, maker);
             }
-            uint fee = (payoutValue/100) * 3; // Sevice fee is 3 percent, 1 percent goes to judge
+            uint judgeFee = (payoutValue/100);
+            uint fee = judgeFee * 3; // Sevice fee is 3 percent, 1 percent goes to judge
             payoutValue -= fee;
-           
+            mevu.addMevuBalance(fee-judgeFee);
+            mevu.transferEth(judge, judgeFee);
             payout(wagerId, maker, taker, payoutValue, false);
         }           
     }
@@ -261,9 +263,7 @@ contract CustomWagersController is Ownable {
    
     function payout(bytes32 wagerId, address maker, address taker, uint payoutValue, bool agreed) {  
         require(!customWagers.getSettled(wagerId));
-        customWagers.setSettled(wagerId);           
-        uint origVal =  customWagers.getOrigValue(wagerId);
-        uint winVal = customWagers.getWinningValue(wagerId);
+        customWagers.setSettled(wagerId);      
         address winner = customWagers.getWinner(wagerId);                      
         mevu.transferEth(winner, payoutValue);              
         if (agreed) {                             
@@ -283,8 +283,7 @@ contract CustomWagersController is Ownable {
     { 
         require (rewards.getUnlockedEthBalance(msg.sender) >= eth);
         rewards.subUnlockedEth(msg.sender, eth);
-        rewards.subEth(msg.sender, eth);
-        //playerFunds -= eth;
+        rewards.subEth(msg.sender, eth);      
         mevu.transferEth(msg.sender, eth);         
     }        
 

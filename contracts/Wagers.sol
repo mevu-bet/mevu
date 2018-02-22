@@ -1,6 +1,7 @@
 pragma solidity 0.4.18;
-import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
-contract Wagers is Ownable {
+//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./AuthorityGranter.sol";
+contract Wagers is AuthorityGranter {
         
     struct Wager {
         bytes32 eventId;        
@@ -20,23 +21,9 @@ contract Wagers is Ownable {
         bool locked;
         bool settled;        
     }
-
-    mapping (address => bool) private isAuthorized;  
+ 
     mapping (bytes32 => Wager) wagersMap;
-    mapping (address => mapping (bytes32 => bool)) recdRefund;
-
-    modifier onlyAuth () {
-        require(isAuthorized[msg.sender]);               
-                _;
-    }
-
-    function grantAuthority (address nowAuthorized) onlyOwner {
-        isAuthorized[nowAuthorized] = true;
-    }
-
-    function removeAuthority (address unauthorized) onlyOwner {
-        isAuthorized[unauthorized] = false;
-    }
+    mapping (address => mapping (bytes32 => bool)) recdRefund;  
     
     function makeWager (
         bytes32 wagerId, 

@@ -1,7 +1,8 @@
 pragma solidity 0.4.18;
-import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./AuthorityGranter.sol";
 
-contract Oracles is Ownable {  
+contract Oracles is AuthorityGranter {  
 
     struct OracleStruct { 
         bytes32 eventId;
@@ -26,8 +27,7 @@ contract Oracles is Ownable {
     uint private oracleServiceFee = 3; //Percent
     mapping (address => mapping(bytes32 => bool)) private rewardClaimed;
     mapping (address => mapping(bytes32 => bool)) private refundClaimed;
-    mapping (address => mapping(bytes32 => bool)) private alreadyRegistered;
-    mapping (address => bool) private isAuthorized;         
+    mapping (address => mapping(bytes32 => bool)) private alreadyRegistered;    
     mapping (address => mapping (bytes32 => OracleStruct)) private oracleStructs; 
     mapping (bytes32 => EventStruct) private eventStructs;   
     mapping (address => bytes32) private lastEventOraclized;    
@@ -35,18 +35,7 @@ contract Oracles is Ownable {
     address[] private correctOracles;
     bytes32[] private correctStructs;
 
-    modifier onlyAuth () {
-        require(isAuthorized[msg.sender]);               
-                _;
-    }      
     
-    function grantAuthority (address nowAuthorized) external onlyOwner {
-        isAuthorized[nowAuthorized] = true;
-    }
-
-    function removeAuthority (address unauthorized) external onlyOwner {
-        isAuthorized[unauthorized] = false;
-    }  
 
     function removeOracle (address oracle, bytes32 eventId) external onlyAuth {
         OracleStruct memory thisOracle;

@@ -270,47 +270,6 @@ contract WagersController is Ownable {
             }      
     }
 
-    //  function cancelWager (
-    //     bytes32 wagerId, 
-    //     bool withdraw
-    // ) 
-    //     onlyBettor(wagerId)
-    //     notPaused
-    //     notTaken(wagerId)        
-    //     external 
-    // {           
-    //     wagers.setSettled(wagerId);                   
-    //     if (withdraw) {
-    //         rewards.subEth(msg.sender, wagers.getOrigValue(wagerId));                
-    //         //msg.sender.transfer (wagers.getOrigValue(wagerId));
-    //         mevu.transferEth(msg.sender, wagers.getOrigValue(wagerId));
-    //     } else {
-    //         rewards.addUnlockedEth(msg.sender, wagers.getOrigValue(wagerId));
-    //     }            
-    // }
-  
-    // function requestCancel (bytes32 wagerId)
-    //     onlyBettor(wagerId)
-    //     mustBeTaken(wagerId)
-    //     notSettled(wagerId)
-    //     external
-    // {
-    //     if (msg.sender == wagers.getTaker(wagerId)) {            
-    //         wagers.setTakerCancelRequest(wagerId);
-    //     } else {
-    //         wagers.setMakerCancelRequest(wagerId);
-    //     }
-    // }
-  
-    // function confirmCancel (bytes32 wagerId)
-    //     notSettled(wagerId)
-    //     external 
-    // {
-    //     if (wagers.getMakerCancelRequest(wagerId) && wagers.getTakerCancelRequest(wagerId)) {
-    //        abortWager(wagerId);
-    //     }
-    // }
-
     function withdraw(
         uint eth    
     )
@@ -322,54 +281,7 @@ contract WagersController is Ownable {
         rewards.subEth(msg.sender, eth);
         //playerFunds -= eth;
         mevu.transferEth(msg.sender, eth);         
-    }
-
-    //     function cancelWager (
-    //     bytes32 wagerId, 
-    //     bool withdraw
-    // ) 
-    //     onlyBettor(wagerId)
-    //     notPaused
-    //     notTaken(wagerId)
-    //     wagerUnlocked(wagerId) 
-    // {          
-    //     wagers.setLocked(wagerId);
-    //     wagers.setSettled(wagerId);                   
-    //     if (withdraw) {
-    //         rewards.subEth(msg.sender, wagers.getOrigValue(wagerId));                
-    //         msg.sender.transfer (wagers.getOrigValue(wagerId));
-    //     } else {
-    //         rewards.addUnlockedEth(msg.sender, wagers.getOrigValue(wagerId));
-    //     }            
-    // }
-
-    // function requestWagerCancel(bytes32 wagerId) 
-    //     mustBeTaken(wagerId) 
-    //     notSettled(wagerId) 
-    // {       
-    //     if (msg.sender == wagers.getTaker(wagerId)) {
-    //         if (wagers.getMakerCancelRequest(wagerId)) {            
-    //             wagers.setSettled(wagerId);
-    //             events.removeWager(wagers.getEventId(wagerId), wagers.getWinningValue(wagerId));                
-    //             rewards.addUnlockedEth(wagers.getMaker(wagerId), wagers.getOrigValue(wagerId)); 
-    //             rewards.addUnlockedEth(wagers.getTaker(wagerId),  (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
-    //         } else {
-    //             wagers.setTakerCancelRequest(wagerId);
-    //         }
-    //     }
-    //     if (msg.sender ==  wagers.getMaker(wagerId)) {
-    //         if (wagers.getTakerCancelRequest(wagerId)) {            
-    //             wagers.setSettled(wagerId);
-    //             events.removeWager(wagers.getEventId(wagerId), wagers.getWinningValue(wagerId));              
-    //             rewards.addUnlockedEth(wagers.getMaker(wagerId), wagers.getOrigValue(wagerId));
-    //             rewards.addUnlockedEth(wagers.getTaker(wagerId),  (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
-    //         } else {
-    //             wagers.setMakerCancelRequest(wagerId);
-    //         }
-    //     }        
-    // }
-    
-        
+    }        
 
     /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
      *  been cancelled, refunds all eth.               

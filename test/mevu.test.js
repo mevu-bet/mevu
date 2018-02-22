@@ -42,6 +42,7 @@ contract('Mevu', function(accounts) {
    let oracleVerif;
    let mvuToken; 
    let initialFund = 100000000000000000;
+   let zeroAddress = '0x0000000000000000000000000000000000000000';
 
    let balanceA;
    let balanceB;
@@ -309,14 +310,14 @@ contract('Mevu', function(accounts) {
 
         it ("it should let anyone make a custom wager with no judge", async function () {
             let balanceA =  web3.eth.getBalance(accounts[0]).valueOf();
-            await customWagersController.makeWager(web3.sha3("wager1"), 1618182608 ,1, 10000000000000000, 100, '0x0000000000000000000000000000000000000000', {value:10000000000000000}).should.be.fulfilled;
+            await customWagersController.makeWager(web3.sha3("wager1"), 1618182608 ,1, 10000000000000000, 100, zeroAddress, {value:10000000000000000}).should.be.fulfilled;
             let maker = await customWagers.getMaker(web3.sha3("wager1"));
             maker.should.equal(accounts[0]);
             let newBalance =  web3.eth.getBalance(accounts[0]).valueOf();
             let diff = balanceA - newBalance;
             diff.should.be.above(10000000000000000);
 
-            await customWagersController.makeWager(web3.sha3("wager2"), 1618182608 ,1, 10000000000000000, 100, '0x0000000000000000000000000000000000000000', {from:accounts[6], value:10000000000000000}).should.be.fulfilled;
+            await customWagersController.makeWager(web3.sha3("wager2"), 1618182608 ,1, 10000000000000000, 100, zeroAddress, {from:accounts[6], value:10000000000000000}).should.be.fulfilled;
 
             //await wagersController.makeWager(web3.sha3("wager2") , 10000000000000000, web3.sha3("test_event2"), 100, 1, {from:accounts[2], value:10000000000000000}).should.be.fulfilled;
         });
@@ -337,7 +338,7 @@ contract('Mevu', function(accounts) {
         });
 
         it ("it should let anyone take a custom wager", async function () {
-            await customWagersController.takeWager(web3.sha3("wager1"), '0x0000000000000000000000000000000000000000', {from:accounts[1], value:10000000000000000}).should.be.fulfilled;
+            await customWagersController.takeWager(web3.sha3("wager1"), zeroAddress, {from:accounts[1], value:10000000000000000}).should.be.fulfilled;
             let taker = await customWagers.getTaker(web3.sha3("wager1"));
             taker.should.equal(accounts[1]);       
         });
@@ -375,6 +376,9 @@ contract('Mevu', function(accounts) {
             await oracleVerif.addVerifiedOracle(accounts[3], 5555555558).should.be.fulfilled;
             await oracleVerif.addVerifiedOracle(accounts[4], 5555555559).should.be.fulfilled;
         });
+        it ("should stop a non owner from verifying an oracle", async function() {
+            await oracleVerif.addVerifiedOracle(accounts[5], 5555555551, {from: accounts[1]}).should.be.rejectedWith(EVMRevert);
+        });
     });
 
     describe('starting oraclize recursion -- ', function () {   
@@ -397,7 +401,10 @@ contract('Mevu', function(accounts) {
         });
         
         it ("should not accept oracle votes before event is voteReady", async function() {
-            await oraclesController.registerOracle (web3.sha3("test_event2"), 10, 1).should.be.rejectedWith(EVMRevert);
+            await wagersController.submitVote(web3.sha3("wager1") , 1, {from:accounts[0]}).should.be.rejectedWith(EVMRevert);
+        });
+        it ("should not accept bettor votes before event is voteReady", async function() {
+            await wagersController.submitVote(web3.sha3("wager1") , 1, {from:accounts[0]}).should.be.rejectedWith(EVMRevert);
         });
         
         it ("should make a recently finished event voteReady", async function() {
@@ -414,6 +421,10 @@ contract('Mevu', function(accounts) {
             vote.valueOf().should.equal('1');
 
             await wagersController.submitVote(web3.sha3("wager2") , 1, {from:accounts[2], gasPrice:2000000000}).should.be.fulfilled;
+        });
+
+        it ("should prevent non-bettors from voting", async function () {
+            await wagersController.submitVote(web3.sha3("wager1") , 1, {from:accounts[4]}).should.be.rejectedWith(EVMRevert);
         });
 
         it ("should let taker vote and do nothing if they disagree", async function () {

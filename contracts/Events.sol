@@ -1,9 +1,10 @@
 pragma solidity 0.4.18;
-import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./AuthorityGranter.sol";
 import "./Oracles.sol";
 import "./Admin.sol";
 import "./Mevu.sol";
-contract Events is Ownable {
+contract Events is AuthorityGranter {
 
     Admin private admin;
     Oracles private oracles;
@@ -26,25 +27,13 @@ contract Events is Ownable {
         bool locked;       
         bool cancelled;
     }
-    mapping (address => bool) private isAuthorized;
+   
     mapping (bytes32 => StandardWagerEvent) private standardEvents;
     bytes32[] private emptyBytes32Array;
     bytes32[] public activeEvents;
     uint public eventsCount;
 
-    modifier onlyAuth () {
-        require(isAuthorized[msg.sender]);               
-                _;
-    }
-
-    function grantAuthority (address nowAuthorized) external onlyOwner {
-        isAuthorized[nowAuthorized] = true;
-    }
-
-    function removeAuthority (address unauthorized) external onlyOwner {
-        isAuthorized[unauthorized] = false;
-    }
-
+  
     function setOraclesContract (address thisAddr) external onlyOwner {
         oracles = Oracles(thisAddr);
     }
