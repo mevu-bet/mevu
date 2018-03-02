@@ -1,9 +1,7 @@
 pragma solidity 0.4.18;
-//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./AuthorityGranter.sol";
 
-
-contract Admin is AuthorityGranter {   
+contract Admin is AuthorityGranter {  
   
     uint private minWagerAmount = 10;
     uint private callbackInterval = 1;
@@ -14,8 +12,7 @@ contract Admin is AuthorityGranter {
     int private oracleRepReward = 1;
     int private playerAgreeRepReward = 1;
     int private playerDisagreeRepPenalty = 4;
-    mapping (bytes32 => uint) private minOracleNum;   
-    
+    mapping (bytes32 => uint) private minOracleNum;      
    
 
     function setMinOracleStake (uint newMin) external onlyAuth {
@@ -62,6 +59,10 @@ contract Admin is AuthorityGranter {
       */
     function setMinWagerAmount(uint256 minWager) external onlyAuth {
         minWagerAmount = minWager;
+    }
+    
+    function getCallbackGasLimit() external view returns (uint) {
+        return callbackGasLimit;
     }  
     
     function getCallbackInterval() external view returns (uint) {
@@ -70,14 +71,22 @@ contract Admin is AuthorityGranter {
 
     function getMaxOracleInterval() external view returns (uint) {
        return maxOracleInterval;
-    }
+    }  
     
-    function getMinWagerAmount() external view returns (uint) {
-       return minWagerAmount;
+    function getMinOracleNum (bytes32 eventId) external view returns (uint) {
+        return minOracleNum[eventId];
     }
 
     function getMinOracleStake () external view returns (uint) {
         return minOracleStake;
+    }   
+    
+    function getMinWagerAmount() external view returns (uint) {
+       return minWagerAmount;
+    }
+    
+    function getOracleRepPenalty () external view returns (int) {
+        return oracleRepPenalty;
     }
 
     function getOracleRepReward () external view returns (int) {
@@ -90,19 +99,7 @@ contract Admin is AuthorityGranter {
 
     function getPlayerDisagreeRepPenalty () external view returns (int) {
         return playerDisagreeRepPenalty;
-    }
-    
-    function getOracleRepPenalty () external view returns (int) {
-        return oracleRepPenalty;
-    }
-
-    function getCallbackGasLimit() external view returns (uint) {
-        return callbackGasLimit;
-    }
-
-    function getMinOracleNum (bytes32 eventId) external view returns (uint) {
-        return minOracleNum[eventId];
-    }
+    }  
  
 
 }
