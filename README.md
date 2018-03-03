@@ -1,6 +1,8 @@
-# meVu Contracts
+![MEVU Banner](images/banner.png)
 
-A network of smart-contracts deployed to the EVM to facilitate a system of peer-to-peer betting called [Mevu][mevu].
+# meVu
+
+A network of smart-contracts to facilitate a system of peer-to-peer betting called [Mevu][mevu].
 
 This code is still in active development and is not yet intended for a main net release.
 
@@ -196,6 +198,113 @@ Grants an address authority by adding it to the isAuthorized mapping.
 function removeAuthority (address unauthorized) external onlyOwner
 ```
 Takes an address' authority by removing it from the isAuthorized mapping.
+
+
+### CancelController Functions
+
+
+**setMevuContract**
+```cs
+function setMevuContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Mevu contract is deployed to.
+
+
+**setCustomWagersContract**
+```cs
+function setCustomWagersContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest CustomWagers contract is deployed to.
+
+
+**setWagersContract**
+```cs
+function setWagersContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Wagers contract is deployed to.
+
+
+**setRewardsContract**
+```cs
+function setRewardsContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Rewards contract is deployed to.
+
+
+**abortWagerCustom**
+```cs
+function abortWagerCustom(bytes32 wagerId) internal
+```
+Settles a custom wager and refunds the players.
+
+
+**abortWagerStandard**
+```cs
+function abortWagerStandard(bytes32 wagerId) internal
+```
+Settles a standard wager and refunds the players.
+
+
+**cancelWagerStandard**
+```cs
+function cancelWagerStandard (bytes32 wagerId, bool withdraw) 
+    onlyBettorStandard(wagerId)
+    notPaused
+    notTakenStandard(wagerId)           
+    external
+```
+Cancels a standard wager before a player has taken it.
+
+
+**cancelWagerCustom**
+```cs
+function cancelWagerCustom (bytes32 wagerId, bool withdraw) 
+    onlyBettorCustom(wagerId)
+    notPaused      
+    notTakenCustom(wagerId)          
+    external
+```
+Cancels a custom wager before a player has taken it.
+
+
+**requestCancelCustom**
+```cs
+function requestCancelCustom (bytes32 wagerId)
+    onlyBettorCustom(wagerId)        
+    mustBeTakenCustom(wagerId)
+    notSettledCustom(wagerId)
+    external
+```
+Requests the cancellation of a matched custom wager.
+
+
+**requestCancelStandard**
+```cs
+function requestCancelStandard (bytes32 wagerId)
+    onlyBettorStandard(wagerId)
+    mustBeTakenStandard(wagerId)       
+    notSettledStandard(wagerId)
+    external
+```
+Requests the cancellation of a matched standard wager.
+
+
+**confirmCancelStandard**
+```cs
+function confirmCancelStandard (bytes32 wagerId)
+    notSettledStandard(wagerId)
+    external
+```
+Confirms the cancellation of a matched standard wager where both players have requested cacellation.
+
+
+**confirmCancelCustom**
+```cs
+function confirmCancelCustom (bytes32 wagerId)
+    notSettledCustom(wagerId)
+    external
+```
+Confirms the cancellation of a matched custom wager where both players have requested cacellation.
 
 
 
