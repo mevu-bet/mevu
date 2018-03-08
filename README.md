@@ -40,7 +40,10 @@ truffle test
 
 ## Code
 
+![MEVU Contracts](images/ContractChart.jpeg)
+
 ### Admin Functions
+
 
 **setCallbackGasLimit**
 ```cs
@@ -304,7 +307,368 @@ function confirmCancelCustom (bytes32 wagerId)
     notSettledCustom(wagerId)
     external
 ```
-Confirms the cancellation of a matched custom wager where both players have requested cacellation.
+Confirms the cancellation of a matched custom wager where both players have requested cancellation.
+
+
+### CustomWagers Functions
+
+
+**makeWager**
+```cs
+function makeWager (
+        bytes32 wagerId,
+        uint endTime,
+        uint reportinEndTime,          
+        uint origValue,
+        uint winningValue,        
+        uint makerChoice,
+        uint takerChoice,
+        uint odds,
+        uint makerWinnerVote,
+        uint takerWinnerVote,
+        address maker,
+        address judge
+        )
+            external
+            onlyAuth
+```
+Creates a wager in the wagers mapping.
+
+
+**setCancelled**
+```cs
+function setCancelled (bytes32 wagerId) external onlyAuth
+```
+Sets a wager as cancelled.
+
+
+**setSettled**
+```cs
+function setSettled (bytes32 wagerId) external onlyAuth
+```
+Sets a wager as settled.
+
+
+**setMakerWinVote**
+```cs
+function setMakerWinVote (bytes32 id, uint winnerVote) external onlyAuth
+```
+After an event is over set the bet maker's vote for the event winner.
+
+
+**setTakerWinVote**
+```cs
+function setTakerWinVote (bytes32 id, uint winnerVote) external onlyAuth
+```
+After an event is over set the bet taker's vote for the event winner.
+
+
+**setRefund**
+```cs
+function setRefund (address bettor, bytes32 wagerId) external onlyAuth
+```
+Sets the boolean indicating that a player has recieved a refund for a particular bet to true.
+
+
+**setMakerCancelRequest**
+```cs
+function setMakerCancelRequest (bytes32 id) external onlyAuth
+```
+Sets the boolean indicating that a bet maker has requested a cancellation for a particular bet to true.
+
+
+**setTakerCancelRequest**
+```cs
+function setTakerCancelRequest (bytes32 id) external onlyAuth
+```
+Sets the boolean indicating that a bet taker has requested a cancellation for a particular bet to true.
+
+
+**setTaker**
+```cs
+function setTaker (bytes32 wagerId, address taker) external onlyAuth
+```
+Sets the taker for a bet.
+
+
+**setWinner**
+```cs
+function setWinner (bytes32 id, address winner) external onlyAuth
+```
+Sets the winner for a bet.
+
+
+**setJudgesVote**
+```cs
+function setJudgesVote (bytes32 id, uint vote) external onlyAuth
+```
+Sets the judges vote for a bet.
+
+
+**setLoser**
+```cs
+function setLoser (bytes32 id, address loser) external onlyAuth
+```
+Sets the loser for a bet.
+
+
+**setWinningValue**
+```cs
+function setWinningValue (bytes32 wagerId, uint value) external onlyAuth
+```
+Sets the amount that the bet winner will recieve before fees.
+
+
+**getCancelled**
+```cs
+function getCancelled (bytes32 wagerId) external view returns (bool)
+```
+Returns the bool indicating if the given bet has been cancelled.
+
+
+**getEndTime**
+```cs
+function getEndTime (bytes32 wagerId) external view returns (uint)
+```
+Returns the end timestamp of the given bet.
+
+
+**getReportingEndTime**
+```cs
+function getReportingEndTime (bytes32 wagerId) external view returns (uint)
+```
+Returns the end timestamp of the reporting period for a given bet.
+
+
+**getLocked**
+```cs
+function getLocked (bytes32 id) external view returns (bool)
+```
+Returns true if the given bet has been taken.
+
+
+**getSettled**
+```cs
+function getSettled (bytes32 id) external view returns (bool)
+```
+Returns true if the given bet has been settled (paid out or cancelled).
+
+
+**getMaker**
+```cs
+function getMaker(bytes32 wagerId) external view returns (address)
+```
+Returns the bets maker.
+
+
+**getTaker**
+```cs
+function getTaker(bytes32 wagerId) external view returns (address)
+```
+Returns the bets taker.
+
+
+**getMakerChoice**
+```cs
+function getMakerChoice (bytes32 wagerId) external view returns (uint)
+```
+Returns the team number the maker bet on.
+
+
+**getTakerChoice**
+```cs
+function getTakerChoice (bytes32 wagerId) external view returns (uint)
+```
+Returns the team number the taker bet on.
+
+
+**getMakerCancelRequest**
+```cs
+function getMakerCancelRequest (bytes32 wagerId) external view returns (bool)
+```
+Returns true if the maker has requested a bet cancellation.
+
+
+**getTakerCancelRequest**
+```cs
+function getTakerCancelRequest (bytes32 wagerId) external view returns (bool)
+```
+Returns true if the taker has requested a bet cancellation.
+
+
+**getMakerWinVote**
+```cs
+function getMakerWinVote (bytes32 wagerId) external view returns (uint)
+```
+Returns the maker's vote for the event winner regarding a given bet.
+
+
+**getTakerWinVote**
+```cs
+function getTakerWinVote (bytes32 wagerId) external view returns (uint)
+```
+Returns the taker's vote for the event winner regarding a given bet.
+
+
+**getRefund**
+```cs
+function getRefund (address bettor, bytes32 wagerId) external view returns (bool)
+```
+Returns true if the given bettor has already recieved a refund for the given bet.
+
+
+**getOdds**
+```cs
+function getOdds (bytes32 wagerId) external view returns (uint)
+```
+Returns the odds for a given bet.
+
+
+**getOrigValue**
+```cs
+function getOrigValue (bytes32 wagerId) external view returns (uint)
+```
+Returns the amount sent by the maker for a given bet.
+
+
+**getWinningValue**
+```cs
+function getWinningValue (bytes32 wagerId) external view returns (uint)
+```
+Returns the amount sent by the maker and taker for a given bet.
+
+
+**getWinner**
+```cs
+function getWinner (bytes32 wagerId) external view returns (address)
+```
+Returns the winner of a given bet.
+
+
+**getLoser**
+```cs
+function getLoser (bytes32 wagerId) external view returns (address)
+```
+Returns the loser of a given bet.  
+
+
+**getJudge**
+```cs
+function getJudge (bytes32 wagerId) external view returns (address)
+```
+Returns the judge of a given bet.
+
+
+**getJudgesVote**
+```cs
+function getJudgesVote (bytes32 wagerId) external view returns (uint)
+```
+Returns the vote cast by a judge of a given bet.
+
+
+### CustomWagersController Functions
+
+
+**setAdminContract**
+```cs
+function setAdminContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Admin contract is deployed to.
+
+
+**setMevuContract**
+```cs
+function setMevuContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Mevu contract is deployed to.
+
+
+**setCustomWagersContract**
+```cs
+function setCustomWagersContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest CustomWagers contract is deployed to.
+
+
+**setRewardsContract**
+```cs
+function setRewardsContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Rewards contract is deployed to.
+
+
+**makeWager**
+```cs
+function makeWager (
+        bytes32 id,
+        uint endTime,
+        uint reportingEndTime,
+        uint makerChoice,
+        uint value,
+        uint odds,
+        address judge
+        )
+        notMade(id)    
+        checkBalance(value)
+        notPaused
+        external
+        payable
+```
+Used by a player to make a new bet.
+
+
+**takeWager**
+```cs
+function takeWager (
+        bytes32 id,
+        address judge      
+    )
+        notTaken(id)
+        notOver(id)
+        external
+        payable
+```
+Used by a player to take a bet.
+
+
+**submitVote**
+```cs
+function submitVote (      
+        bytes32 wagerId,
+        uint winnerVote
+    ) 
+        onlyBettor(wagerId) 
+        mustBeEnded(wagerId)
+        notSettled(wagerId)
+        notPaused
+        external
+```
+Used by a player to submit vote for winner after event has ended.
+
+
+**submitJudgeVote**
+```cs
+function submitJudgeVote (bytes32 wagerId, uint vote)
+        mustBeEnded(wagerId)
+        notSettled(wagerId)
+        validVote(vote)
+        external 
+```
+Used by a player assigned as a judge for a custom wager to submit vote for winner after event has ended.
+
+
+**settle**
+```cs
+function settle(bytes32 wagerId) internal
+```
+Settles bet after both bettors have voted.
+
+
+
+
+
+
+
 
 
 
