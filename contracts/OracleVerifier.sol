@@ -1,10 +1,10 @@
 pragma solidity ^0.4.18;
-import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./AuthorityGranter.sol";
 
 /** @title Oracle Verifier -- This contract controls the adding to and removal from the list of verified oracles.
   * 
   */
-contract OracleVerifier is Ownable {
+contract OracleVerifier is AuthorityGranter {
 
     address mevuAccount;
     mapping (address => bytes32) phoneHashAtAddress;
@@ -21,7 +21,7 @@ contract OracleVerifier is Ownable {
       * @param newOracle - address of the new oracle.
       * @param phoneNumber - ten digit phone number belonging to Oracle which has already been verified.
       */
-    function addVerifiedOracle(address newOracle, uint phoneNumber) onlyOwner {
+    function addVerifiedOracle(address newOracle, uint phoneNumber) onlyAuth {
         bytes32 phoneHash = keccak256(phoneNumber);
         if (verified[newOracle]) {
             revert();
@@ -38,7 +38,7 @@ contract OracleVerifier is Ownable {
     /** @dev Removes an address as a verified Oracle so the user may no longer register to report event outcomes.
       * @param oracle - address of the oracle to be removed.
       */
-    function removeVerifiedOracle (address oracle) onlyOwner {
+    function removeVerifiedOracle (address oracle) onlyAuth {
         verified[oracle] = false;
         timesRemoved[oracle] += 1;
     }

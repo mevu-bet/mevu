@@ -2,7 +2,7 @@ pragma solidity ^0.4.18;
 
 
 //import './MvuTokenBet.sol';
-import '../zeppelin-solidity/contracts/token/MintableToken.sol';
+import '../zeppelin-solidity/contracts/token/ERC20/MintableToken.sol';
 
 /**
  * @title MvuToken
@@ -12,30 +12,14 @@ import '../zeppelin-solidity/contracts/token/MintableToken.sol';
 
 contract MvuToken is MintableToken {
     event TokensMade(address indexed to, uint amount); 
-    uint  saleEnd = 1515645598; // TODO: Update with actual date
-    uint betsEnd = 1519000651;  // TODO: Update with actual date
-    uint tokenCap = 100000000; // TODO: Update with actual cap
-    //MvuTokenBet public bet;
+  
  
-    modifier saleOver () {
-        require (now > saleEnd);
-        _;
-    }
-
-    modifier betsAllowed () {
-        require (now < betsEnd);
-        _;
-    }
-
-    modifier underCap (uint tokens) {
-        require(totalSupply + tokens < tokenCap);
-        _;
-    }
+  
 
     function MvuToken (uint initFounderSupply) {   
         balances[msg.sender] = initFounderSupply;
         TokensMade(msg.sender, initFounderSupply);      
-        totalSupply += initFounderSupply;
+        totalSupply_ += initFounderSupply;
         //bet = createBetContract();   
     }
     
@@ -43,11 +27,11 @@ contract MvuToken is MintableToken {
     //   return new MvuTokenBet();
     // }
 
-    function transfer (address _to, uint _value) saleOver public returns (bool) {
+    function transfer (address _to, uint _value)  public returns (bool) {
         super.transfer(_to, _value);
     }
 
-    function mint(address _to, uint _amount) onlyOwner canMint underCap(_amount) public returns (bool) {
+    function mint(address _to, uint _amount) onlyOwner canMint public returns (bool) {
         super.mint(_to, _amount);
     }
 
@@ -69,7 +53,6 @@ contract MvuToken is MintableToken {
     // function setEventWinner (uint winner) external onlyOwner {
     //     bet.setEventWinner(winner);
     // }
-
-  
+ 
 
 } 

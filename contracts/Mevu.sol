@@ -1,8 +1,7 @@
 
 
-pragma solidity 0.4.18; 
+pragma solidity ^0.4.18; 
 import "./AuthorityGranter.sol";
-//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../ethereum-api/usingOraclize.sol";
 import "./Events.sol";
 import "./Admin.sol";

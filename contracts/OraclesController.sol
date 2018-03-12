@@ -49,7 +49,7 @@ contract OraclesController is Ownable {
     }
 
     modifier noWinner (bytes32 eventId) {
-        require (events.getWinner(eventId) == 0);
+        require (events.getWinner(eventId) == 4);
         _;
     }
 
@@ -62,7 +62,7 @@ contract OraclesController is Ownable {
         oracleVerif  = OracleVerifier(thisAddr);
     }
 
-    function setRewardsContract   (address thisAddr) external onlyOwner {
+    function setRewardsContract (address thisAddr) external onlyOwner {
         rewards = Rewards(thisAddr);
     }
     
@@ -115,8 +115,8 @@ contract OraclesController is Ownable {
             oracles.addToOracleList(msg.sender);                
         }
         oracles.setLastEventOraclized(msg.sender, eventId) ;
-        transferTokensToMevu(msg.sender, mvuStake);
-        //mvuToken.transferFrom(msg.sender, address(this), mvuStake);       
+        //transferTokensToMevu(msg.sender, mvuStake);
+        mvuToken.transferFrom(msg.sender, address(this), mvuStake);       
         oracles.addOracle (msg.sender, eventId, mvuStake, winnerVote);                  
         rewards.addMvu(msg.sender, mvuStake);          
                          
@@ -186,14 +186,15 @@ contract OraclesController is Ownable {
     }   
 
     function transferTokensToMevu (address oracle, uint mvuStake) internal {
-        mvuToken.transferFrom(oracle, address(mevu), mvuStake);       
+        mvuToken.transferFrom(oracle, mevu, mvuStake);       
     }
 
-    function withdraw (uint mvu) {
+    function withdraw (uint mvu) external {
         require (rewards.getUnlockedMvuBalance(msg.sender) >= mvu);
         rewards.subUnlockedMvu(msg.sender, mvu);
         rewards.subMvu(msg.sender, mvu);
-        mvuToken.transfer (msg.sender, mvu);
+        mvuToken.transfer(msg.sender, mvu);
+        //mevu.transferTokensFromMevu (msg.sender, mvu);
     }
 
 

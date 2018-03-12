@@ -1,5 +1,4 @@
-pragma solidity 0.4.18;
-//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+pragma solidity ^0.4.18;
 import "./AuthorityGranter.sol";
 import "./Oracles.sol";
 import "./Admin.sol";
@@ -47,9 +46,9 @@ contract Events is AuthorityGranter {
     }     
        
 
-     /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
+    /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
       * @param name The name of the event to be diplayed.
-      * @param startTime The date and time the event begins in the YYYYMMDD9999 format.
+      * @param startTime The timestamp of when the event starts
       * @param duration The length of the event in seconds.     
       * @param teamOne The name of one of the participants, eg. Toronto Maple Leafs, Georges St-Pierre, Justin Trudeau.
       * @param teamTwo The name of teamOne's opposition.     
@@ -91,12 +90,11 @@ contract Events is AuthorityGranter {
         standardEvents[eventId].totalAmountResolvedWithoutOracles += value;
     }
 
-    function determineEventStage (bytes32 thisEventId, uint lastIndex) external onlyAuth {
-        
+    function determineEventStage (bytes32 thisEventId, uint lastIndex) external onlyAuth {        
         uint eventEndTime = getStart(thisEventId) + getDuration(thisEventId);
         if (block.timestamp > eventEndTime){
             // Event is over
-            if (this.getVoteReady(thisEventId) == false){
+            if (getVoteReady(thisEventId) == false){
                 makeVoteReady(thisEventId);
             } else {
                 // Go through next active event in array and finalize winners with voteReady events
@@ -120,12 +118,12 @@ contract Events is AuthorityGranter {
                 if (tieCount > teamTwoCount && tieCount > teamOneCount){
                     setWinner(eventId, 3);// Tie
                 } else {
-                    setWinner(eventId, 0); // No clear winner
+                    setWinner(eventId, 4); // No clear winner
                 }
             }
         }
           if (oracles.getOracleVotesNum(eventId) < admin.getMinOracleNum(eventId)){
-             setWinner(eventId, 0); // No clear winner
+             setWinner(eventId, 4); // No clear winner
          }
     }     
 
@@ -155,6 +153,10 @@ contract Events is AuthorityGranter {
     function setLocked (bytes32 eventId) public onlyAuth {
         standardEvents[eventId].locked = true;        
     }
+
+    function getFinished (bytes32 eventId) external view returns (bool) {
+        return (block.timestamp > getEndTime(eventId));
+    } 
   
     function getActiveEventId (uint i) external view returns (bytes32) {
         return activeEvents[i];
@@ -188,11 +190,11 @@ contract Events is AuthorityGranter {
         return standardEvents[id].duration;
     }
 
-    function getEndTime (bytes32 id) external view returns (uint) {
+    function getEndTime (bytes32 id) public view returns (uint) {
         return (standardEvents[id].startTime + standardEvents[id].duration);
     }
 
-    function getLocked(bytes32 id) external view returns (bool) {
+    function getLocked(bytes32 id) public view returns (bool) {
         return standardEvents[id].locked;
     }
 
@@ -200,7 +202,7 @@ contract Events is AuthorityGranter {
         return standardEvents[id].winner;
     }
 
-    function getVoteReady (bytes32 id) external view returns (bool) {
+    function getVoteReady (bytes32 id) public view returns (bool) {      
         return standardEvents[id].voteReady;
     }
 

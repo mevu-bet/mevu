@@ -1,4 +1,4 @@
-pragma solidity 0.4.18;
+pragma solidity ^0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Admin.sol"; 
 import "./CustomWagers.sol"; 
@@ -12,6 +12,8 @@ contract CustomWagersController is Ownable {
     Rewards private rewards;
     CustomWagers private customWagers;
     Mevu private mevu; 
+
+    event JudgeNeeded (address judge, bytes32 wagerId);
    
     modifier mustBeTaken (bytes32 wagerId) {
         require (customWagers.getTaker(wagerId) != address(0));
@@ -26,7 +28,12 @@ contract CustomWagersController is Ownable {
     modifier notSettled(bytes32 wagerId) {
         require (!customWagers.getSettled(wagerId));
         _;           
-    }  
+    }
+
+    // modifier reportingOver(bytes32 wagerId) {
+    //     require (block.timestamp > customWagers.getReportingEndTime(wagerId));
+    //     _;
+    // }  
 
     modifier checkBalance (uint wagerValue) {
         require (wagerValue >= admin.getMinWagerAmount());
@@ -59,6 +66,11 @@ contract CustomWagersController is Ownable {
         _;
     }
 
+    modifier onlyMaker (bytes32 wagerId) {
+        require (msg.sender == customWagers.getMaker(wagerId));
+        _;
+    }
+
     modifier validVote (uint vote) {
         require (vote == 1 || vote == 2 || vote == 3);
         _;
@@ -83,10 +95,11 @@ contract CustomWagersController is Ownable {
     function makeWager (
         bytes32 id,
         uint endTime,
+        uint reportingEndTime,
         uint makerChoice,
         uint value,
-        uint odds,
-        address judge
+        uint odds
+        
         )
         notMade(id)    
         checkBalance(value)
@@ -102,7 +115,8 @@ contract CustomWagersController is Ownable {
         }
              
         customWagers.makeWager  ( id,
-                            endTime,                            
+                            endTime,
+                            reportingEndTime,                            
                             value,
                             value + (value / (odds/100)),                            
                             makerChoice,
@@ -110,11 +124,15 @@ contract CustomWagersController is Ownable {
                             odds,
                             0,
                             0,
-                            msg.sender,
-                            judge);
+                            msg.sender
+                            );
         rewards.addEth(msg.sender, msg.value);       
         rewards.subUnlockedEth(msg.sender, (value - msg.value));
         address(mevu).transfer(msg.value);
+    }
+
+    function addJudge (bytes32 wagerId, address judge) onlyMaker(wagerId) notTaken(wagerId) external {
+        customWagers.addJudge(wagerId, judge);
     }
 
 
@@ -254,14 +272,37 @@ contract CustomWagersController is Ownable {
              uint judgesVote = customWagers.getJudgesVote(wagerId);
             if (judgesVote != 0) {
                 judgeSettle(wagerId, judge, judgesVote, maker, taker, makerWinVote, origValue, payoutValue);
-            }          
+            } else {
+                JudgeNeeded (judge, wagerId);
+            }         
         } else {
             abortWager(wagerId);
         }        
-    }  
+    }
+
+
+     function finalizeAbandonedBet (bytes32 wagerId) 
+    //     //onlyBettor(wagerId)
+    //    //reportingOver(wagerId)
+    //     external
+     {       
+         require (block.timestamp > customWagers.getReportingEndTime(wagerId));
+    //     if (
+    //         customWagers.getMakerWinVote(wagerId) != 0 && 
+    //         customWagers.getTakerWinVote(wagerId) == 0) {
+    //         rewards.subPlayerRep(customWagers.getTaker(wagerId), admin.getPlayerDisagreeRepPenalty());
+    //     } else {
+    //         if (
+    //      customWagers.getTakerWinVote(wagerId) != 0 &&
+    //         customWagers.getMakerWinVote(wagerId) == 0) {
+    //         rewards.subPlayerRep(customWagers.getMaker(wagerId), admin.getPlayerDisagreeRepPenalty());
+    //         }
+    //     }
+         abortWager(wagerId);
+     }  
 
    
-    function payout(bytes32 wagerId, address maker, address taker, uint payoutValue, bool agreed) {  
+    function payout(bytes32 wagerId, address maker, address taker, uint payoutValue, bool agreed) internal {  
         require(!customWagers.getSettled(wagerId));
         customWagers.setSettled(wagerId);      
         address winner = customWagers.getWinner(wagerId);                      

@@ -1,10 +1,10 @@
-pragma solidity 0.4.18;
-//import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
+pragma solidity ^0.4.18;
 import "./AuthorityGranter.sol";
 contract CustomWagers is AuthorityGranter {
         
     struct Wager {
-        uint endTime;            
+        uint endTime;
+        uint reportingEndTime;            
         uint origValue;
         uint winningValue;        
         uint makerChoice;
@@ -27,22 +27,11 @@ contract CustomWagers is AuthorityGranter {
     mapping (address => mapping (bytes32 => bool)) private recdRefund;
     mapping  (bytes32 => uint) private judgesVote;
 
-    modifier onlyAuth () {
-        require(isAuthorized[msg.sender]);               
-                _;
-    }
-
-    function grantAuthority (address nowAuthorized) external onlyOwner {
-        isAuthorized[nowAuthorized] = true;
-    }
-
-    function removeAuthority (address unauthorized) external onlyOwner {
-        isAuthorized[unauthorized] = false;
-    }
     
     function makeWager (
         bytes32 wagerId,
-        uint endTime,          
+        uint endTime,
+        uint reportingEndTime,          
         uint origValue,
         uint winningValue,        
         uint makerChoice,
@@ -50,13 +39,14 @@ contract CustomWagers is AuthorityGranter {
         uint odds,
         uint makerWinnerVote,
         uint takerWinnerVote,
-        address maker,
-        address judge
+        address maker
+        
         )
             external
             onlyAuth             
         {
         Wager memory thisWager = Wager (endTime,
+                                        reportingEndTime,
                                         origValue,
                                         winningValue,
                                         makerChoice,
@@ -66,7 +56,7 @@ contract CustomWagers is AuthorityGranter {
                                         takerWinnerVote,
                                         maker,
                                         address(0),
-                                        judge,
+                                        address(0),
                                         address(0),
                                         address(0),
                                         false,
@@ -75,8 +65,12 @@ contract CustomWagers is AuthorityGranter {
         wagersMap[wagerId] = thisWager;       
     }
 
-    function setCancelled (bytes32 bet) external onlyAuth {
-        cancelled[bet] = true;
+    function addJudge (bytes32 wagerId, address judge) external onlyAuth {
+        wagersMap[wagerId].judge = judge;
+    }
+
+    function setCancelled (bytes32 wagerId) external onlyAuth {
+        cancelled[wagerId] = true;
     }    
 
     function setSettled (bytes32 wagerId) external onlyAuth {
@@ -123,12 +117,16 @@ contract CustomWagers is AuthorityGranter {
         wagersMap[wagerId].winningValue = value;
     }
 
-    function getCancelled (bytes32 bet) external view returns (bool) {
-        return cancelled[bet];
+    function getCancelled (bytes32 wagerId) external view returns (bool) {
+        return cancelled[wagerId];
     }
 
     function getEndTime (bytes32 wagerId) external view returns (uint) {
         return wagersMap[wagerId].endTime;
+    } 
+
+    function getReportingEndTime (bytes32 wagerId) external view returns (uint) {
+        return wagersMap[wagerId].reportingEndTime;
     }   
 
     function getLocked (bytes32 id) external view returns (bool) {
@@ -143,69 +141,71 @@ contract CustomWagers is AuthorityGranter {
         return wagersMap[id].settled;
     }
 
-    function getMaker(bytes32 id) external view returns (address) {
-        return wagersMap[id].maker;
+    function getMaker(bytes32 wagerId) external view returns (address) {
+        return wagersMap[wagerId].maker;
     }
 
-    function getTaker(bytes32 id) external view returns (address) {
-        return wagersMap[id].taker;
+    function getTaker(bytes32 wagerId) external view returns (address) {
+        return wagersMap[wagerId].taker;
     }
 
-    function getMakerChoice (bytes32 id) external view returns (uint) {
-        return wagersMap[id].makerChoice;
+    function getMakerChoice (bytes32 wagerId) external view returns (uint) {
+        return wagersMap[wagerId].makerChoice;
     }
 
-    function getTakerChoice (bytes32 id) external view returns (uint) {
-        return wagersMap[id].takerChoice;
+    function getTakerChoice (bytes32 wagerId) external view returns (uint) {
+        return wagersMap[wagerId].takerChoice;
     }
 
-    function getMakerCancelRequest (bytes32 id) external view returns (bool) {
-        return wagersMap[id].makerCancelRequest;
+    function getMakerCancelRequest (bytes32 wagerId) external view returns (bool) {
+        return wagersMap[wagerId].makerCancelRequest;
     }
 
-    function getTakerCancelRequest (bytes32 id) external view returns (bool) {
-        return wagersMap[id].takerCancelRequest;
+    function getTakerCancelRequest (bytes32 wagerId) external view returns (bool) {
+        return wagersMap[wagerId].takerCancelRequest;
     }
 
-    function getMakerWinVote (bytes32 id) external view returns (uint) {
-        return wagersMap[id].makerWinnerVote;
+    function getMakerWinVote (bytes32 wagerId) external view returns (uint) {
+        return wagersMap[wagerId].makerWinnerVote;
+    }
+    
+    function getTakerWinVote (bytes32 wagerId) external view returns (uint) {
+        return wagersMap[wagerId].takerWinnerVote;
     }
 
     function getRefund (address bettor, bytes32 wagerId) external view returns (bool) {
         return recdRefund[bettor][wagerId];
+    }    
+
+    function getOdds (bytes32 wagerId) external view returns (uint) {
+        return wagersMap[wagerId].odds;
     }
 
-    function getTakerWinVote (bytes32 id) external view returns (uint) {
-        return wagersMap[id].takerWinnerVote;
+    function getOrigValue (bytes32 wagerId) external view returns (uint) {
+        return wagersMap[wagerId].origValue;
     }
 
-    function getOdds (bytes32 id) external view returns (uint) {
-        return wagersMap[id].odds;
+    function getWinningValue (bytes32 wagerId) external view returns (uint) {
+        return wagersMap[wagerId].winningValue;
     }
 
-    function getOrigValue (bytes32 id) external view returns (uint) {
-        return wagersMap[id].origValue;
+    function getWinner (bytes32 wagerId) external view returns (address) {
+        return wagersMap[wagerId].winner;
+    } 
+    
+    function getLoser (bytes32 wagerId) external view returns (address) {
+        return wagersMap[wagerId].loser;
     }
 
-    function getWinningValue (bytes32 id) external view returns (uint) {
-        return wagersMap[id].winningValue;
+    function getJudge (bytes32 wagerId) external view returns (address) {
+        return wagersMap[wagerId].judge;
     }
 
-    function getWinner (bytes32 id) external view returns (address) {
-        return wagersMap[id].winner;
+    function getJudgesVote (bytes32 wagerId) external view returns (uint) {
+        return judgesVote[wagerId];
     }
 
-    function getJudge (bytes32 id) external view returns (address) {
-        return wagersMap[id].judge;
-    }
-
-    function getJudgesVote (bytes32 id) external view returns (uint) {
-        return judgesVote[id];
-    }
-
-    function getLoser (bytes32 id) external view returns (address) {
-        return wagersMap[id].loser;
-    }
+   
 
 
 }

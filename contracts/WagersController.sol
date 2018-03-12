@@ -1,5 +1,5 @@
 
-pragma solidity 0.4.18;
+pragma solidity ^0.4.18;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Admin.sol"; 
 import "./Wagers.sol"; 
@@ -12,7 +12,9 @@ contract WagersController is Ownable {
     Events events;
     Rewards rewards;
     Wagers wagers;
-    Mevu mevu; 
+    Mevu mevu;
+
+    event WagerMade(bytes32 id, uint value, uint blockNumber); 
 
     modifier eventUnlocked(bytes32 eventId){
         require (!events.getLocked(eventId));
@@ -27,17 +29,8 @@ contract WagersController is Ownable {
     modifier mustBeTaken (bytes32 wagerId) {
         require (wagers.getTaker(wagerId) != address(0));
         _;
-    }
-
-    modifier mustBeVoteReady(bytes32 eventId) {
-        require (events.getVoteReady(eventId));
-        _;           
-    }
-
-    modifier notSettled(bytes32 wagerId) {
-        require (!wagers.getSettled(wagerId));
-        _;           
-    }  
+    } 
+  
 
     modifier checkBalance (uint wagerValue) {
         require (wagerValue >= admin.getMinWagerAmount());
@@ -51,7 +44,7 @@ contract WagersController is Ownable {
     }
 
     modifier onlyBettor (bytes32 wagerId) {
-        require (msg.sender == wagers.getMaker(wagerId) || msg.sender == wagers.getTaker(wagerId));
+        require (msg.sender == wagers.getMaker(wagerId) || msg.sender == wagers.getTaker(wagerId));        
         _;
     }
 
@@ -92,7 +85,7 @@ contract WagersController is Ownable {
         bytes32 eventId,
         uint odds,
         uint makerChoice
-    )
+    )    
     notMade(wagerId)
     eventUnlocked(eventId)   
     checkBalance(value)
@@ -116,17 +109,16 @@ contract WagersController is Ownable {
                             0,
                             0,
                             msg.sender);
+        WagerMade(wagerId, value, block.number);
         rewards.addEth(msg.sender, msg.value);       
         rewards.subUnlockedEth(msg.sender, (value - msg.value));
         address(mevu).transfer(msg.value);
-  
-
     }
 
     function takeWager (
         bytes32 id      
     )
-    payable
+        payable
     {
         uint expectedValue = wagers.getOrigValue(id) / (wagers.getOdds(id) / 100);
         require (rewards.getUnlockedEthBalance(msg.sender) + msg.value >= expectedValue);         
@@ -137,9 +129,6 @@ contract WagersController is Ownable {
         uint totalValue = expectedValue + wagers.getOrigValue(id);    
         events.addWager(wagers.getEventId(id), totalValue);    
         address(mevu).transfer(msg.value);
-  
-  
-
     }
 
       /** @dev Enters the makers vote for who actually won after the event is over.               
@@ -151,9 +140,10 @@ contract WagersController is Ownable {
         uint winnerVote
     ) 
         onlyBettor(wagerId) 
-        mustBeVoteReady(wagers.getEventId(wagerId))
         notPaused 
     {
+        require(events.getFinished(eventId));
+        require (!wagers.getSettled(wagerId));
         bytes32 eventId = wagers.getEventId(wagerId);
         if (msg.sender == wagers.getMaker(wagerId)){        
             wagers.setMakerWinVote (wagerId, winnerVote);
@@ -175,6 +165,7 @@ contract WagersController is Ownable {
             }       
         }       
     }
+
 
     /** @dev Settles the wager if both the maker and taker have voted, pays out if they agree, otherwise they need to wait for oracle settlement.               
       * @param wagerId bytes32 id for the wager.         
