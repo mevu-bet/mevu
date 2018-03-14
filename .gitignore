@@ -1,6 +1,9 @@
-
 node_modules
 
 build
 
 zeppelin-solidity-master
+
+ethereum-api
+
+ethereum-bridge
