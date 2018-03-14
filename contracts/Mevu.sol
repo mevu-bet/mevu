@@ -8,7 +8,8 @@ import "./Admin.sol";
 import "./Wagers.sol";
 import "./Rewards.sol";
 import "./Oracles.sol";
-import "./MvuToken.sol";
+//import "./MvuToken.sol";
+import "../zeppelin-solidity/contracts/token/ERC20/MintableToken.sol";
 
 contract Mevu is AuthorityGranter, usingOraclize {
 
@@ -17,7 +18,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
     Admin private admin;
     Oracles private oracles;
     Rewards private rewards;   
-    MvuToken private mvuToken;
+    MintableToken private mvuToken;
     Wagers private wagers;
     
     bool public contractPaused = false;
@@ -57,7 +58,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
  
     // Constructor 
     function Mevu () payable { 
-        OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);                
+        OAR = OraclizeAddrResolverI(0x6f485c8bf6fc43ea212e93bbf8ce046c7f1cb475);                
         mevuWallet = msg.sender;
         newMonth = block.timestamp + monthSeconds;       
     }
@@ -87,7 +88,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
     }
  
     function setMvuTokenContract (address thisAddr) external onlyOwner {
-        mvuToken = MvuToken(thisAddr);
+        mvuToken = MintableToken(thisAddr);
     } 
   
     function __callback (bytes32 myid, string result)  notPaused {        
