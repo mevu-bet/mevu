@@ -151,9 +151,9 @@ contract Mevu is AuthorityGranter, usingOraclize {
         validIds[queryId] = true;
     }       
     
-    function callRandomNum (uint max) internal {
-        randomNum(max);
-    }
+    // function callRandomNum (uint max) internal {
+    //     randomNum(max);
+    // }
 
     /** @dev Checks to see if a month (in seconds) has passed since the last lottery paid out, pays out if so    
       */ 
@@ -164,18 +164,17 @@ contract Mevu is AuthorityGranter, usingOraclize {
         }
     }
 
-    /** @dev Pays out the monthly lottery balance to a random oracle and sends the mevuWallet its accrued balance.   
+    /** @dev Pays out the monthly lottery balance to a random oracle.   
       */ 
     function payoutLottery(address potentialWinner) internal { 
-        // TODO: add functionality to test for oracle service being provided within one mointh of block.timestamp   
-        
+    
         if (allowedToWin(potentialWinner)) {           
             uint thisWin = lotteryBalance;
             lotteryBalance = 0;                
             potentialWinner.transfer(thisWin);
         } else {
             require(oracles.getOracleListLength() > 0);
-            callRandomNum(oracles.getOracleListLength()-1);            
+            randomNum(oracles.getOracleListLength()-1);            
         }       
         
     }
@@ -196,7 +195,8 @@ contract Mevu is AuthorityGranter, usingOraclize {
 
     function allowedToWin (address potentialWinner) internal view returns (bool) {
         if (mvuToken.balanceOf(potentialWinner) > 0 && 
-        (block.timestamp - events.getEndTime(oracles.getLastEventOraclized(potentialWinner)) < admin.getMaxOracleInterval()))
+        (block.timestamp - events.getEndTime(oracles.getLastEventOraclized(potentialWinner)) < 
+        admin.getMaxOracleInterval()))
         {
             return true;
         } else {
@@ -274,13 +274,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
    
     function getNewMonth () internal view returns (uint256) {
         return newMonth;
-    }
-
-    function makeOraclizeQuery (string engine, string query) internal {
-        bytes32 queryId =  oraclize_query (engine, query, admin.getCallbackGasLimit());
-        validIds[queryId] = true;          
-       
-    }
+    }  
 
     function uintToBytes(uint v) internal view returns (bytes32 ret) {
         if (v == 0) {

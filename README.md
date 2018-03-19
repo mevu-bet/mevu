@@ -664,6 +664,520 @@ function settle(bytes32 wagerId) internal
 Settles bet after both bettors have voted.
 
 
+**judgeSettle**
+```cs
+function judgeSettle (
+        bytes32 wagerId,
+        address judge,
+        uint judgesVote,
+        address maker,
+        address taker,
+        uint makerWinVote,
+        uint origValue,
+        uint payoutValue
+        )
+        internal 
+```
+Settles bet after the judge has voted.
+
+
+**tieJudged**
+```cs
+function tieJudged(address judge, address maker, address taker, uint origValue, uint payoutValue ) internal
+```
+Facilitates payout if the judge had to rule a tie.
+
+
+
+**checkJudge**
+```cs
+function checkJudge (bytes32 wagerId, address maker, address taker, uint makerWinVote, uint takerWinVote, uint origValue, uint payoutValue) internal
+```
+Checks to see if there has been a judge appointed, if so, checks to see if they've voted yet. If there is no judge the wager is aborted.
+
+
+
+**finalizeAbandonedBet**
+```cs
+function finalizeAbandonedBet (bytes32 wagerId) 
+    onlyBettor(wagerId)
+    reportingOver(wagerId)
+    external
+```
+Allows a bettor to reclaim their eth if the person they are betting with never reports.
+
+
+**payout**
+```cs
+function payout(bytes32 wagerId, address maker, address taker, uint payoutValue, bool agreed) internal
+```
+Pays out a settled wager.
+
+
+**withdraw**
+```cs
+function withdraw(
+        uint eth    
+    )
+        notPaused   
+        external
+```
+Allows a user to withdraw eth that may still be in the mevu contract due to an aborted wager.
+
+
+**abortWager**
+```cs
+function abortWager(bytes32 wagerId) internal
+```
+Sets a wager as settled and unlocks the eth so users can withdraw.
+
+
+### Events Functions
+
+
+**setAdminContract**
+```cs
+function setAdminContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Admin contract is deployed to.
+
+
+**setMevuContract**
+```cs
+function setMevuContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Mevu contract is deployed to.
+
+
+**setOraclesContract**
+```cs
+function setOraclesContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Oracles contract is deployed to.
+
+
+**makeStandardEvent**
+```cs
+function makeStandardEvent(
+        bytes32 id,
+        bytes32 name,
+        uint startTime,
+        uint duration,
+        bytes32 teamOne,
+        bytes32 teamTwo
+    )
+        external
+        onlyOwner
+```
+Creates a supported event for users to bet on and oraclize.
+
+
+**addResolvedWager**
+```cs
+function addResolvedWager (bytes32 eventId, uint value) external onlyAuth
+```
+Adds the value of a resolved wagger to the running total value of resolved wagers based on a specific event.
+
+
+**determineEventStage**
+```cs
+function determineEventStage (bytes32 thisEventId, uint lastIndex) external onlyAuth
+```
+If an event is recently completed, it is designated as voteReady, if it was already voteReady then it is now locked.
+
+
+**decideWinner**
+```cs
+function decideWinner (bytes32 eventId) internal
+```
+Determines the winner of a completed event based on oracle votes.
+
+
+
+**removeEventFromActive**
+```cs
+function removeEventFromActive (bytes32 eventId) internal
+```
+Removes an event which is over and settled from the active events array.
+
+
+**removeWager**
+```cs
+function removeWager (bytes32 eventId, uint value) external onlyAuth
+```
+Removes wager data from the event struct.
+
+
+**addWager**
+```cs
+function addWager(bytes32 eventId, uint value) external onlyAuth
+```
+Adds wager data to the event struct.
+
+
+**setWinner**
+```cs
+function setWinner (bytes32 eventId, uint winner) public onlyAuth
+```
+Sets event winner.
+
+
+**setLocked**
+```cs
+function setLocked (bytes32 eventId) public onlyAuth
+```
+Sets event as locked.
+
+
+**getFinished**
+```cs
+function getFinished (bytes32 eventId) external view returns (bool)
+```
+Returns true if the current block time is later than the event end time.
+
+
+**getActiveEventId**
+```cs
+function getActiveEventId (uint i) external view returns (bytes32)
+```
+Returns the bytes32 id of the wager in the active events array at the given index.
+
+
+**getActiveEventsLength**
+```cs
+function getActiveEventsLength () external view returns (uint)
+```
+Returns the length of the active events array.
+
+
+**getStandardEventCount**
+```cs
+function getStandardEventCount () external view returns (uint)
+```
+Returns the total number of events ever.
+
+
+**getTotalAmountBet**
+```cs
+function getTotalAmountBet (bytes32 eventId) external view returns (uint)
+```
+Returns the total number of events ever.
+
+
+**getTotalAmountResolvedWithoutOracles**
+```cs
+function getTotalAmountResolvedWithoutOracles (bytes32 eventId) external view returns (uint)
+```
+Returns the amount of wei that bettors on this event who have resolved without oracles have bet.
+
+
+**getCancelled**
+```cs
+function getCancelled(bytes32 id) external view returns (bool)
+```
+Returns true if the given event has been cancelled.
+
+
+**getStart**
+```cs
+function getStart (bytes32 id) public view returns (uint)
+```
+Returns the start time (timestamp in seconds) of given event.
+
+
+**getDuration**
+```cs
+function getDuration (bytes32 id) public view returns (uint)
+```
+Returns the duration (seconds) of given event.
+
+
+**getEndTime**
+```cs
+function getEndTime (bytes32 id) public view returns (uint)
+```
+Returns the end time (timestamp in seconds) of given event.
+
+
+**getLocked**
+```cs
+function getLocked(bytes32 id) public view returns (bool)
+```
+Returns true if event is over and settled or cancelled.
+
+
+**getWinner**
+```cs
+function getWinner (bytes32 id) external view returns (uint)
+```
+Returns the winner of the event.  1 = team one,  2 = team two,  3 = tie,  4 = no clear winnner
+
+
+**getVoteReady**
+```cs
+function getVoteReady (bytes32 id) public view returns (bool)
+```
+Returns true if the event is currently in the voting/reporting period (i.e. finished but not locked).
+
+
+**makeVoteReady**
+```cs
+function makeVoteReady (bytes32 id) internal
+```
+Sets an event as vote ready to initiate the voting period.
+
+
+
+
+### Mevu Functions
+
+
+**setAdminContract**
+```cs
+function setAdminContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Admin contract is deployed to.
+
+
+**setEventsContract**
+```cs
+function setEventsContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Events contract is deployed to.
+
+
+**setMvuTokenContract**
+```cs
+function setEventsContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Events contract is deployed to.
+
+
+**setOraclesContract**
+```cs
+function setOraclesContract (address thisAddr) external onlyOwner
+```
+Sets the address which the MvuToken contract is deployed to.
+
+
+**setRewardsContract**
+```cs
+function setRewardsContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Rewards contract is deployed to.
+
+
+**setWagersContract**
+```cs
+function setWagersContract (address thisAddr) external onlyOwner
+```
+Sets the address which the latest Wagers contract is deployed to.
+
+
+**setMevuWallet**
+```cs
+function setMevuWallet (address newAddress) external onlyOwner
+```
+Sets the address which the mevu multi-sig wallet is deployed to.
+
+
+**abandonContract**
+```cs
+function abandonContract() external onlyPaused
+```
+Allows user to abandon contract and withdraw funds if platform has been compromised and admin has paused it.
+
+
+**__callback**
+```cs
+function __callback (bytes32 myid, string result)  notPaused
+```
+Is called by Oraclize API.
+
+
+**randomNum**
+```cs
+function randomNum(uint max) private
+```
+Calls the oraclize contract for a random number generated through the Wolfram Alpha engine.
+
+
+**checkLottery**
+```cs
+function checkLottery() internal
+```
+Checks to see if a month (in seconds) has passed since the last lottery paid out, pays out if so.
+
+
+**payoutLottery**
+```cs
+function payoutLottery(address potentialWinner) internal
+```
+Pays out the monthly lottery balance to a random oracle.
+
+
+**playerRefund**
+```cs
+function playerRefund (bytes32 wagerId) external  onlyBettor(wagerId)
+```
+Players should call this when an event has been cancelled after thay have made a wager to recieve a refund.
+
+
+**allowedToWin**
+```cs
+function allowedToWin (address potentialWinner) internal view returns (bool)
+```
+Checks if a potential lottery winner has oraclized an event recently enough to be eligible to win.
+
+
+**pauseContract**
+```cs
+function pauseContract () external onlyOwner
+```
+Pauses the contract, preventing betting and only allowing emergency withdrawals.
+
+
+**restartContract**
+```cs
+function restartContract(uint secondsFromNow) external onlyOwner payable
+```
+Restarts a paused contract by reinitiating the oraclize recursion.
+
+
+**mevuWithdraw**
+```cs
+function mevuWithdraw (uint amount) external onlyOwner
+```
+Allows mevu team to withdraw earnings to multi-sig wallet.
+
+
+**addMevuBalance**
+```cs
+function addMevuBalance (uint amount) external onlyAuth
+```
+Adds to the mevu balance.
+
+
+**addEventToIterator**
+```cs
+function addEventToIterator () external onlyAuth
+```
+Adds one to the iterator index.
+
+
+**addLotteryBalance**
+```cs
+function addLotteryBalance (uint amount) external onlyAuth
+```
+Adds to the lottery balance.
+
+
+**addToPlayerFunds**
+```cs
+function addToPlayerFunds (uint amount) external onlyAuth
+```
+Adds to the player funds balance.
+
+
+**subFromPlayerFunds**
+```cs
+function subFromPlayerFunds (uint amount) external onlyAuth
+```
+Subs from the player funds balance.
+
+
+**transferEth**
+```cs
+function transferEth (address recipient, uint amount) external onlyAuth
+```
+Transfers eth from the mevu contract.
+
+
+**getContractPaused**
+```cs
+function getContractPaused() external view returns (bool)
+```
+Returns true if contract is paused.
+
+
+**getOracleFee**
+```cs
+function getOracleFee () external view returns (uint256)
+```
+Returns the oracle service fee.
+
+
+**transferTokensToMevu**
+```cs
+function transferTokensToMevu (address oracle, uint mvuStake) internal
+```
+Transfers MVU tokens to the mevu contract.
+
+
+**transferTokensFromMevu**
+```cs
+function transferTokensFromMevu (address oracle, uint mvuStake) external onlyAuth
+```
+Transfers MVU tokens from the mevu contract.
+
+
+**addMonth**
+```cs
+function addMonth () internal
+```
+Resets the newMonth variable to a month in the future.
+
+
+**getNewMonth**
+```cs
+function getNewMonth () internal view returns (uint256)
+```
+Resets the newMonth variable, this is when the lottery will payout.
+
+
+**uintToBytes**
+```cs
+function uintToBytes(uint v) internal view returns (bytes32 ret)
+```
+Returns the bytes32 of a given uint.
+
+
+**bytes32ToString**
+```cs
+function bytes32ToString (bytes32 data) internal view returns (string)
+```
+Returns the string of a given bytes32.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
 
 
 
