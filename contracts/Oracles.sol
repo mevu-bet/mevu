@@ -49,8 +49,8 @@ contract Oracles is AuthorityGranter {
         thisOracle = OracleStruct (eventId, mvuStake, winnerVote, false);      
         oracleStructs[oracle][eventId] = thisOracle;
         if (winnerVote == 1) {
-         eventStructs[eventId].votesForOne ++;
-         eventStructs[eventId].stakeForOne += mvuStake; 
+            eventStructs[eventId].votesForOne ++;
+            eventStructs[eventId].stakeForOne += mvuStake; 
         }
         if (winnerVote == 2) {
             eventStructs[eventId].votesForTwo ++;
@@ -79,15 +79,15 @@ contract Oracles is AuthorityGranter {
     }
 
     function setRefunded (address oracle, bytes32 eventId) external onlyAuth {
-       refundClaimed[oracle][eventId] = true; 
+        refundClaimed[oracle][eventId] = true; 
     }
 
     function setRegistered (address oracle, bytes32 eventId) external onlyAuth {
-       alreadyRegistered[oracle][eventId] = true; 
+        alreadyRegistered[oracle][eventId] = true; 
     }
 
     function getRegistered (address oracle, bytes32 eventId) external view returns (bool) {
-       return alreadyRegistered[oracle][eventId];
+        return alreadyRegistered[oracle][eventId];
     }
 
     function getWinnerVote(bytes32 eventId, address oracle) external view returns (uint) {

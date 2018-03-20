@@ -732,6 +732,32 @@ function abortWager(bytes32 wagerId) internal
 Sets a wager as settled and unlocks the eth so users can withdraw.
 
 
+### CustomWagersController Events
+
+**JudgeNeeded**
+```cs
+event JudgeNeeded (address judge, bytes32 wagerId)
+```
+
+
+**WagerMade**
+```cs
+event WagerMade(bytes32 id)
+```
+
+
+**WagerTaken**
+```cs
+event WagerTaken(bytes32 id)
+```
+
+
+**WagerSettled**
+```cs
+event WagerSettled(bytes32 wagerId)
+```
+
+
 ### Events Functions
 
 
@@ -927,6 +953,13 @@ function makeVoteReady (bytes32 id) internal
 Sets an event as vote ready to initiate the voting period.
 
 
+### Events Events
+
+
+**EventVoteReady**
+```cs
+event EventVoteReady(bytes32 eventId)
+```
 
 
 ### Mevu Functions
@@ -1147,6 +1180,34 @@ Returns the bytes32 of a given uint.
 function bytes32ToString (bytes32 data) internal view returns (string)
 ```
 Returns the string of a given bytes32.
+
+
+### Mevu Events
+
+
+**NewOraclizeQuery**
+```cs
+event NewOraclizeQuery (string description)
+```
+
+
+### Oracles Functions
+
+
+**addOracle**
+```cs
+function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote) external onlyAuth
+```
+
+
+**removeOracle**
+```cs
+function removeOracle (address oracle, bytes32 eventId) external onlyAuth
+```
+Adds an oracle and their vote info to the oracleStructs and eventStructs mappings.
+
+
+
 
 
 

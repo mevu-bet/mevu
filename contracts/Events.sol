@@ -9,6 +9,8 @@ contract Events is AuthorityGranter {
     Oracles private oracles;
     Mevu private mevu;
 
+    event EventVoteReady(bytes32 eventId);
+
     struct StandardWagerEvent {        
         bytes32 name;       
         bytes32 teamOne;
@@ -96,6 +98,7 @@ contract Events is AuthorityGranter {
             // Event is over
             if (getVoteReady(thisEventId) == false){
                 makeVoteReady(thisEventId);
+                EventVoteReady(thisEventId);
             } else {
                 // Go through next active event in array and finalize winners with voteReady events
                 decideWinner(thisEventId);

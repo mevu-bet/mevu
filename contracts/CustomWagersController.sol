@@ -14,6 +14,9 @@ contract CustomWagersController is Ownable {
     Mevu private mevu; 
 
     event JudgeNeeded (address judge, bytes32 wagerId);
+    event WagerMade(bytes32 id); 
+    event WagerTaken(bytes32 id);  
+    event WagerSettled (bytes32 wagerId);
    
     modifier mustBeTaken (bytes32 wagerId) {
         require (customWagers.getTaker(wagerId) != address(0));
@@ -129,6 +132,7 @@ contract CustomWagersController is Ownable {
         rewards.addEth(msg.sender, msg.value);       
         rewards.subUnlockedEth(msg.sender, (value - msg.value));
         address(mevu).transfer(msg.value);
+        WagerMade(id);
     }
 
     function addJudge (bytes32 wagerId, address judge) onlyMaker(wagerId) notTaken(wagerId) external {
@@ -152,6 +156,7 @@ contract CustomWagersController is Ownable {
         rewards.addEth(msg.sender, msg.value);
         customWagers.setTaker(id, msg.sender);      
         address(mevu).transfer(msg.value);
+        WagerTaken(id);
     }
 
 
@@ -216,6 +221,7 @@ contract CustomWagersController is Ownable {
                 }
             }
             payout(wagerId, maker, taker, payoutValue, true);
+            WagerSettled(wagerId);
         } else {
             checkJudge(wagerId, maker, taker, makerWinVote, customWagers.getTakerWinVote(wagerId), origValue, payoutValue);
         }     
@@ -251,6 +257,7 @@ contract CustomWagersController is Ownable {
             mevu.addMevuBalance(fee-judgeFee);
             mevu.transferEth(judge, judgeFee);
             payout(wagerId, maker, taker, payoutValue, false);
+            WagerSettled(wagerId);
         }           
     }
 
@@ -269,7 +276,7 @@ contract CustomWagersController is Ownable {
     function checkJudge (bytes32 wagerId, address maker, address taker, uint makerWinVote, uint takerWinVote, uint origValue, uint payoutValue) internal {
         address judge = customWagers.getJudge(wagerId);
         if (judge != address (0)) {
-             uint judgesVote = customWagers.getJudgesVote(wagerId);
+            uint judgesVote = customWagers.getJudgesVote(wagerId);
             if (judgesVote != 0) {
                 judgeSettle(wagerId, judge, judgesVote, maker, taker, makerWinVote, origValue, payoutValue);
             } else {
@@ -281,25 +288,25 @@ contract CustomWagersController is Ownable {
     }
 
 
-     function finalizeAbandonedBet (bytes32 wagerId) 
+    function finalizeAbandonedBet (bytes32 wagerId) 
     //     //onlyBettor(wagerId)
     //    //reportingOver(wagerId)
-    //     external
-     {       
-         require (block.timestamp > customWagers.getReportingEndTime(wagerId));
-    //     if (
-    //         customWagers.getMakerWinVote(wagerId) != 0 && 
-    //         customWagers.getTakerWinVote(wagerId) == 0) {
-    //         rewards.subPlayerRep(customWagers.getTaker(wagerId), admin.getPlayerDisagreeRepPenalty());
-    //     } else {
-    //         if (
-    //      customWagers.getTakerWinVote(wagerId) != 0 &&
-    //         customWagers.getMakerWinVote(wagerId) == 0) {
-    //         rewards.subPlayerRep(customWagers.getMaker(wagerId), admin.getPlayerDisagreeRepPenalty());
-    //         }
-    //     }
-         abortWager(wagerId);
-     }  
+        external
+    {       
+        require (block.timestamp > customWagers.getReportingEndTime(wagerId));
+        // if (
+        //     customWagers.getMakerWinVote(wagerId) != 0 && 
+        //     customWagers.getTakerWinVote(wagerId) == 0) {
+        //     rewards.subPlayerRep(customWagers.getTaker(wagerId), admin.getPlayerDisagreeRepPenalty());
+        // } else {
+        //     if (
+        //  customWagers.getTakerWinVote(wagerId) != 0 &&
+        //     customWagers.getMakerWinVote(wagerId) == 0) {
+        //     rewards.subPlayerRep(customWagers.getMaker(wagerId), admin.getPlayerDisagreeRepPenalty());
+         //   }
+        //}
+        abortWager(wagerId);
+    }  
 
    
     function payout(bytes32 wagerId, address maker, address taker, uint payoutValue, bool agreed) internal {  

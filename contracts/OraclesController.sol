@@ -17,6 +17,8 @@ contract OraclesController is Ownable {
     Mevu mevu;
     Oracles oracles;
 
+    event OracleRegistered(address oracle, bytes32 eventId);
+
     modifier eventUnlocked(bytes32 eventId){
         require (!events.getLocked(eventId));
         _;
@@ -118,7 +120,8 @@ contract OraclesController is Ownable {
         //transferTokensToMevu(msg.sender, mvuStake);
         mvuToken.transferFrom(msg.sender, address(this), mvuStake);       
         oracles.addOracle (msg.sender, eventId, mvuStake, winnerVote);                  
-        rewards.addMvu(msg.sender, mvuStake);          
+        rewards.addMvu(msg.sender, mvuStake);     
+        OracleRegistered(msg.sender, eventId);     
                          
     }
 
