@@ -86,15 +86,16 @@
     **[Event transpires]**  
   * player 3 reports event outcome
   * player 4 reports event outcome and disagrees  
-  *(no judge was assigned and wager is aborted)*  
+  *(no judge was assigned at creation and wager is aborted)*  
 ---
 4. Case 4 - Players Bet and Disagree on Outcome (With Judge)
   * player 5 creates bet
   * player 6 takes bet  
     **[Event transpires]**  
   * player 5 reports event outcome
-  * player 6 reports event outcome and disagrees
-  * a Judge is assigned and Judge submits vote, payout is triggered
+  * player 6 reports event outcome and disagrees  
+  *(there was a Judge assigned at creation)*  
+  * Judge submits vote, payout is triggered
   ---
 5. Case 5 - Players Bet and Losing Player Never Reports
   * player 7 creates bet
