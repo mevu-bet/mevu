@@ -6,7 +6,7 @@ import "./Mevu.sol";
 contract Events is AuthorityGranter {
 
     Admin private admin;
-    Oracles private oracles;
+    Oracles private oracles;    
     Mevu private mevu;
 
     event EventVoteReady(bytes32 eventId);
@@ -21,20 +21,20 @@ contract Events is AuthorityGranter {
         uint totalAmountBet;
         uint totalAmountResolvedWithoutOracles;          
         uint winner;
-        uint loser;
+        uint makerBond;       
         uint activeEventIndex;
-        bytes32[] wagers;           
-        bool voteReady;      
+        address maker;
+        bytes32[] wagers;                      
         bool locked;       
         bool cancelled;
     }
    
+    
     mapping (bytes32 => StandardWagerEvent) private standardEvents;
     bytes32[] private emptyBytes32Array;
     bytes32[] public activeEvents;
     uint public eventsCount;
 
-  
     function setOraclesContract (address thisAddr) external onlyOwner {
         oracles = Oracles(thisAddr);
     }
@@ -61,10 +61,12 @@ contract Events is AuthorityGranter {
         uint startTime,
         uint duration,
         bytes32 teamOne,
-        bytes32 teamTwo
+        bytes32 teamTwo,
+        uint bondValue,
+        address maker
     )
         external
-        onlyOwner            
+        onlyAuth            
     {        
         StandardWagerEvent memory thisEvent;   
         thisEvent = StandardWagerEvent( name,                                        
@@ -76,36 +78,42 @@ contract Events is AuthorityGranter {
                                         0,                                    
                                         0,
                                         0,
-                                        0,                                        
+                                        bondValue,                                                                                                              
                                         activeEvents.length,
-                                        emptyBytes32Array,                                                                                                                
-                                        false,                                      
+                                        maker,  
+                                        emptyBytes32Array,                                                                                                                                                                                            
                                         false,                                       
                                         false);
         standardEvents[id] = thisEvent;
         eventsCount++;
         activeEvents.push(id);
-        mevu.addEventToIterator();     
+        //mevu.addEventToIterator();     
     }
 
     function addResolvedWager (bytes32 eventId, uint value) external onlyAuth {
         standardEvents[eventId].totalAmountResolvedWithoutOracles += value;
     }
 
-    function determineEventStage (bytes32 thisEventId, uint lastIndex) external onlyAuth {        
-        uint eventEndTime = getStart(thisEventId) + getDuration(thisEventId);
-        if (block.timestamp > eventEndTime){
-            // Event is over
-            if (getVoteReady(thisEventId) == false){
-                makeVoteReady(thisEventId);
-                EventVoteReady(thisEventId);
-            } else {
-                // Go through next active event in array and finalize winners with voteReady events
-                decideWinner(thisEventId);
-                setLocked(thisEventId);
-                removeEventFromActive(thisEventId);
-            } 
-        }
+    // function determineEventStage (bytes32 thisEventId, uint lastIndex) external onlyAuth {        
+    //     uint eventEndTime = getStart(thisEventId) + getDuration(thisEventId);
+    //     if (block.timestamp > eventEndTime){
+    //         // Event is over
+    //         if (getVoteReady(thisEventId) == false){
+    //             makeVoteReady(thisEventId);
+    //             EventVoteReady(thisEventId);
+    //         } else {
+    //             // Go through next active event in array and finalize winners with voteReady events
+    //             decideWinner(thisEventId);
+    //             setLocked(thisEventId);
+    //             removeEventFromActive(thisEventId);
+    //         } 
+    //     }
+    // }
+
+    function finalizeEvent(bytes32 eventId) external onlyAuth {
+        decideWinner(eventId);
+        setLocked(eventId);
+        removeEventFromActive(eventId);
     }
 
     function decideWinner (bytes32 eventId) internal {      
@@ -201,16 +209,26 @@ contract Events is AuthorityGranter {
         return standardEvents[id].locked;
     }
 
+    function getMaker (bytes32 eventId) external view returns (address) {
+        return standardEvents[eventId].maker;
+    }
+
+    function getMakerBond (bytes32 eventId) external view returns (uint) {
+        return standardEvents[eventId].makerBond;
+    }
+
     function getWinner (bytes32 id) external view returns (uint) {
         return standardEvents[id].winner;
     }
 
-    function getVoteReady (bytes32 id) public view returns (bool) {      
-        return standardEvents[id].voteReady;
+    function getVoteReady (bytes32 id) public view returns (bool) {        //return standardEvents[id].voteReady;
+        return ((standardEvents[id].startTime + standardEvents[id].duration) < block.timestamp);
     }
 
-    function makeVoteReady (bytes32 id) internal {
-        standardEvents[id].voteReady = true;
-    }
+    // function makeVoteReady (bytes32 id) internal {
+    //     standardEvents[id].voteReady = true;
+    // }
+
+    
 
 }

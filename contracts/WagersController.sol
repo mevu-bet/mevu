@@ -31,8 +31,7 @@ contract WagersController is Ownable {
     modifier mustBeTaken (bytes32 wagerId) {
         require (wagers.getTaker(wagerId) != address(0));
         _;
-    } 
-  
+    }   
 
     modifier checkBalance (uint wagerValue) {
         require (wagerValue >= admin.getMinWagerAmount());
@@ -60,31 +59,21 @@ contract WagersController is Ownable {
         _;
     }     
 
-    function setWagersContract (address thisAddr) external onlyOwner {
-        wagers = Wagers(thisAddr);        
-    }
+    function setWagersContract (address thisAddr) external onlyOwner { wagers = Wagers(thisAddr); }
 
-    function setEventsContract (address thisAddr) external onlyOwner {
-        events = Events(thisAddr);        
-    }
+    function setEventsContract (address thisAddr) external onlyOwner { events = Events(thisAddr); }
 
-    function setRewardsContract (address thisAddr) external onlyOwner {
-        rewards = Rewards(thisAddr);        
-    }
+    function setRewardsContract (address thisAddr) external onlyOwner { rewards = Rewards(thisAddr); }
 
-    function setAdminContract (address thisAddr) external onlyOwner {
-        admin = Admin(thisAddr);
-    }
+    function setAdminContract (address thisAddr) external onlyOwner { admin = Admin(thisAddr); }
 
-    function setMevuContract (address thisAddr) external onlyOwner {
-        mevu = Mevu(thisAddr);
-    }
+    function setMevuContract (address thisAddr) external onlyOwner { mevu = Mevu(thisAddr); }
 
 
     function makeWager(
-        bytes32 wagerId,
-        uint value,       
+        bytes32 wagerId,            
         bytes32 eventId,
+        uint value,   
         uint odds,
         uint makerChoice
     )    
@@ -160,7 +149,7 @@ contract WagersController is Ownable {
             lateSettle(wagerId, eventWinner);
             lateSettledPayout(wagerId);                          
         } else {
-            if (events.getCancelled(eventId) || events.getWinner(eventId) == 3) {
+            if (events.getCancelled(eventId) || events.getWinner(eventId) > 2) {
                 abortWager(wagerId);                
             } else {
                 if (wagers.getTakerWinVote(wagerId) != 0 && wagers.getMakerWinVote(wagerId) != 0) {
@@ -182,7 +171,7 @@ contract WagersController is Ownable {
         uint payoutValue = wagers.getWinningValue(wagerId); 
         uint fee = (payoutValue/100) * 2; // Sevice fee is 2 percent
         payoutValue -= fee; 
-        mevu.addMevuBalance(3*(fee/4)); 
+        mevu.addMevuBalance((3*(fee/4))- (payoutValue/admin.getEventMakerRewardDivider())); 
         mevu.addLotteryBalance(fee/8);
         if (wagers.getMakerWinVote(wagerId) == wagers.getTakerWinVote(wagerId)) {
             if (wagers.getMakerWinVote(wagerId) == wagers.getMakerChoice(wagerId)) {
@@ -247,10 +236,10 @@ contract WagersController is Ownable {
         wagers.setSettled(wagerId);
         wagers.setLocked(wagerId);   
         uint origValue = wagers.getOrigValue(wagerId);
-        uint winningValue = wagers.getWinningValue(wagerId);           
-        uint payoutValue = winningValue;
+        uint winningValue = wagers.getWinningValue(wagerId);
+        uint payoutValue = winningValue;         
         uint fee = (payoutValue/100) * 3; //Fee is now 3 percent since oracles were used
-        mevu.addMevuBalance(fee/2);            
+        mevu.addMevuBalance((fee/2) -  (payoutValue/admin.getEventMakerRewardDivider()));            
         mevu.addLotteryBalance(fee/12);
         payoutValue -= fee;            
         address maker = wagers.getMaker(wagerId);
@@ -271,18 +260,18 @@ contract WagersController is Ownable {
        
     }
 
-    function withdraw(
-        uint eth    
-    )
-        notPaused   
-        external         
-    { 
-        require (rewards.getUnlockedEthBalance(msg.sender) >= eth);
-        rewards.subUnlockedEth(msg.sender, eth);
-        rewards.subEth(msg.sender, eth);
-        //playerFunds -= eth;
-        mevu.transferEth(msg.sender, eth);         
-    }        
+    // function withdraw(
+    //     uint eth    
+    // )
+    //     notPaused   
+    //     external         
+    // { 
+    //     require (rewards.getUnlockedEthBalance(msg.sender) >= eth);
+    //     rewards.subUnlockedEth(msg.sender, eth);
+    //     rewards.subEth(msg.sender, eth);
+    //     //playerFunds -= eth;
+    //     mevu.transferEth(msg.sender, eth);         
+    // }        
 
     /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
      *  been cancelled, refunds all eth.               

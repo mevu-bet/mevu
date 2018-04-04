@@ -58,7 +58,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
  
     // Constructor 
     function Mevu () payable { 
-        OAR = OraclizeAddrResolverI(0x6f485c8bf6fc43ea212e93bbf8ce046c7f1cb475);                
+        //OAR = OraclizeAddrResolverI(0x6f485c8bf6fc43ea212e93bbf8ce046c7f1cb475);                
         mevuWallet = msg.sender;
         newMonth = block.timestamp + monthSeconds;       
     }
@@ -67,59 +67,53 @@ contract Mevu is AuthorityGranter, usingOraclize {
                 
     }  
 
-    function setEventsContract (address thisAddr) external onlyOwner {
-        events = Events(thisAddr);        
-    }
+    function setEventsContract (address thisAddr) external onlyOwner { events = Events(thisAddr); }
 
-    function setOraclesContract (address thisAddr) external onlyOwner {
-        oracles = Oracles(thisAddr);
-    }
+    function setOraclesContract (address thisAddr) external onlyOwner { oracles = Oracles(thisAddr); }
 
-    function setRewardsContract   (address thisAddr) external onlyOwner {
-        rewards = Rewards(thisAddr);
-    }
+    function setRewardsContract   (address thisAddr) external onlyOwner { rewards = Rewards(thisAddr); }
 
-    function setAdminContract (address thisAddr) external onlyOwner {
-        admin = Admin(thisAddr);
-    }
+    function setAdminContract (address thisAddr) external onlyOwner { admin = Admin(thisAddr); }
 
-    function setWagersContract (address thisAddr) external onlyOwner {
-        wagers = Wagers(thisAddr);
-    }
+    function setWagersContract (address thisAddr) external onlyOwner { wagers = Wagers(thisAddr); }
  
-    function setMvuTokenContract (address thisAddr) external onlyOwner {
-        mvuToken = MintableToken(thisAddr);
-    } 
+    function setMvuTokenContract (address thisAddr) external onlyOwner { mvuToken = MintableToken(thisAddr); } 
   
     function __callback (bytes32 myid, string result)  notPaused {        
          require(validIds[myid]);
          require(msg.sender == oraclize_cbAddress());      
        
+        
         if (randomNumRequired) {        
              uint maxRange = 2**(8* 7); // this is the highest uint we want to get. It should never be greater than 2^(8*N), where N is the number of random bytes we had asked the datasource to return
              uint randomNumber = uint(keccak256(result)) % maxRange; // this is an efficient way to get the uint out in the [0, maxRange] range
              randomNumRequired = false;   
              address potentialWinner = oracles.getOracleListAt(randomNumber);
              payoutLottery(potentialWinner);
-        } else {             
-            bytes32 queryId;  
-            if (lastIteratedIndex == -1) {               
-               //events.determineEventStage(events.getActiveEventId(lastIteratedIndex), lastIteratedIndex);
-                lastIteratedIndex = int(events.getActiveEventsLength()-1);
-                
-                //checkLottery();
-                NewOraclizeQuery("Last active event processed, callback being set for admin interval.");
-                queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "", admin.getCallbackGasLimit());
-                validIds[queryId] = true; 
-            } else {
-                events.determineEventStage(events.getActiveEventId(uint(lastIteratedIndex)), uint(lastIteratedIndex));               
-               
-                lastIteratedIndex --;
-                NewOraclizeQuery("Not done yet, querying right away again."); 
-                queryId = oraclize_query("URL", "", admin.getCallbackGasLimit());
-                validIds[queryId] = true;        
-            }            
         } 
+        checkLottery();
+
+        
+        
+        //else {             
+        //     bytes32 queryId;  
+        //     if (lastIteratedIndex == -1) {               
+        //        //events.determineEventStage(events.getActiveEventId(lastIteratedIndex), lastIteratedIndex);
+        //         lastIteratedIndex = int(events.getActiveEventsLength()-1);
+                
+        //         //checkLottery();
+        //         NewOraclizeQuery("Last active event processed, callback being set for admin interval.");
+        //         queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "", admin.getCallbackGasLimit());
+        //         validIds[queryId] = true; 
+        //     } else {
+        //         events.determineEventStage(events.getActiveEventId(uint(lastIteratedIndex)), uint(lastIteratedIndex));               
+               
+        //         lastIteratedIndex --;
+        //         NewOraclizeQuery("Not done yet, querying right away again."); 
+        //         queryId = oraclize_query("URL", "", admin.getCallbackGasLimit());
+        //         validIds[queryId] = true;        
+        //     }            
+        // } 
     }    
 
     function setMevuWallet (address newAddress) external onlyOwner {
@@ -158,7 +152,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
     /** @dev Checks to see if a month (in seconds) has passed since the last lottery paid out, pays out if so    
       */ 
     function checkLottery() internal {       
-        if (block.timestamp > getNewMonth()) {
+        if (block.timestamp > newMonth) {
             addMonth();
             randomNum(oracles.getOracleListLength()-1);
         }
@@ -172,6 +166,11 @@ contract Mevu is AuthorityGranter, usingOraclize {
             uint thisWin = lotteryBalance;
             lotteryBalance = 0;                
             potentialWinner.transfer(thisWin);
+            randomNumRequired = true;
+            NewOraclizeQuery("Winner paid, calling after another month");
+            bytes32 queryId = oraclize_query(newMonth - block.timestamp, "URL", "", admin.getCallbackGasLimit());
+            validIds[queryId] = true;  
+
         } else {
             require(oracles.getOracleListLength() > 0);
             randomNum(oracles.getOracleListLength()-1);            
@@ -196,7 +195,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
     function allowedToWin (address potentialWinner) internal view returns (bool) {
         if (mvuToken.balanceOf(potentialWinner) > 0 && 
         (block.timestamp - events.getEndTime(oracles.getLastEventOraclized(potentialWinner)) < 
-        admin.getMaxOracleInterval()))
+        admin.getMaxOracleInterval()) && rewards.getOracleRep(potentialWinner) > 0 && rewards.getPlayerRep(potentialWinner) > 0)
         {
             return true;
         } else {
@@ -217,7 +216,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
         payable
     {            
         contractPaused = false;
-        lastIteratedIndex = int(events.getActiveEventsLength()-1);
+        //lastIteratedIndex = int(events.getActiveEventsLength()-1);
         NewOraclizeQuery("Starting contract!");
         bytes32 queryId = oraclize_query(secondsFromNow, "URL", "", admin.getCallbackGasLimit());
         validIds[queryId] = true;          
@@ -226,55 +225,47 @@ contract Mevu is AuthorityGranter, usingOraclize {
     function mevuWithdraw (uint amount) external onlyOwner {
         require(mevuBalance >= amount);
         mevuWallet.transfer(amount);
-    }  
-
-    function addMevuBalance (uint amount) external onlyAuth {
-        mevuBalance += amount;
     }
 
-    function addEventToIterator () external onlyAuth {
-        lastIteratedIndex++;
-    }
 
-    function addLotteryBalance (uint amount) external onlyAuth {
-        lotteryBalance += amount;
-    } 
+     function withdraw(
+        uint eth    
+    )
+        notPaused   
+        external         
+    { 
+        require (rewards.getUnlockedEthBalance(msg.sender) >= eth);
+        rewards.subUnlockedEth(msg.sender, eth);
+        rewards.subEth(msg.sender, eth);
+        //playerFunds -= eth;
+        msg.sender.transfer(eth);         
+    }    
 
-    function addToPlayerFunds (uint amount) external onlyAuth {
-        playerFunds += amount;
-    }
+    function addMevuBalance (uint amount) external onlyAuth { mevuBalance += amount; }
 
-    function subFromPlayerFunds (uint amount) external onlyAuth {
-        playerFunds -= amount;
-    }
+    // function addEventToIterator () external onlyAuth {
+    //     lastIteratedIndex++;
+    // }
 
-    function transferEth (address recipient, uint amount) external onlyAuth {
-        recipient.transfer(amount);
-    }       
+    function addLotteryBalance (uint amount) external onlyAuth { lotteryBalance += amount; } 
 
-    function getContractPaused() external view returns (bool) {
-        return contractPaused;
-    }     
+    function addToPlayerFunds (uint amount) external onlyAuth { playerFunds += amount; }
 
-    function getOracleFee () external view returns (uint256) {
-        return oracleServiceFee;
-    }
+    function subFromPlayerFunds (uint amount) external onlyAuth { playerFunds -= amount; }
 
-    function transferTokensToMevu (address oracle, uint mvuStake) internal {
-        mvuToken.transferFrom(oracle, this, mvuStake);       
-    }
+    function transferEth (address recipient, uint amount) external onlyAuth { recipient.transfer(amount); }       
 
-    function transferTokensFromMevu (address oracle, uint mvuStake) external onlyAuth {
-        mvuToken.transfer(oracle, mvuStake);       
-    }
+    function getContractPaused() external view returns (bool) { return contractPaused; }     
+
+    function getOracleFee () external view returns (uint256) { return oracleServiceFee; }
+
+    function transferTokensToMevu (address oracle, uint mvuStake) internal { mvuToken.transferFrom(oracle, this, mvuStake); }
+
+    function transferTokensFromMevu (address oracle, uint mvuStake) external onlyAuth { mvuToken.transfer(oracle, mvuStake); }
   
-    function addMonth () internal {
-        newMonth += monthSeconds;
-    }  
+    function addMonth () internal { newMonth += monthSeconds; }  
    
-    function getNewMonth () internal view returns (uint256) {
-        return newMonth;
-    }  
+    function getNewMonth () internal view returns (uint256) { return newMonth; }  
 
     function uintToBytes(uint v) internal view returns (bytes32 ret) {
         if (v == 0) {

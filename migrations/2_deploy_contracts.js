@@ -1,6 +1,7 @@
 const Mevu = artifacts.require("./build/Mevu.sol");
 const Admin = artifacts.require("./build/Admin.sol");
 const Events = artifacts.require("./build/Events.sol");
+const EventsController = artifacts.require("../build/EventsController.sol");
 const Wagers = artifacts.require("./build/Wagers.sol");
 const WagersController = artifacts.require("./build/WagersController.sol");
 const CustomWagers = artifacts.require("./build/CustomWagers.sol");
@@ -15,21 +16,23 @@ const CancelController = artifacts.require("./build/CancelController.sol");
 module.exports = (deployer, network, accounts) => {    
     let deployAddress = accounts[0];    
     let totalSupply = 500000000000;  
-    var admin, mevu, events, oracles, oraclesController, oracleVerifier, wagers, wagersController, customWagers, customWagersController, cancelController, rewards;
+    let gasLimit = 6900000;
+    var admin, mevu, events, eventsController, oracles, oraclesController, oracleVerifier, wagers, wagersController, customWagers, customWagersController, cancelController, rewards, mvuToken;
     
-    deployer.deploy(Oracles,  {from: deployAddress, gas:6900000});
-    deployer.deploy(OraclesController,  {from: deployAddress, gas:6900000});
-    deployer.deploy(Admin,  {from: deployAddress, gas:6900000});
-    deployer.deploy(Events,  {from: deployAddress, gas:6900000});
-    deployer.deploy(OracleVerifier,  {from: deployAddress, gas:6900000});
-    deployer.deploy(Wagers,  {from: deployAddress, gas:6900000});
-    deployer.deploy(WagersController,  {from: deployAddress, gas:6900000});
-    deployer.deploy(CustomWagers,  {from: deployAddress, gas:6900000});
-    deployer.deploy(CustomWagersController,  {from: deployAddress, gas:6900000});
-    deployer.deploy(CancelController,  {from: deployAddress, gas:6900000});
-    deployer.deploy(Rewards, {from: deployAddress, gas:6900000});
-    deployer.deploy(Mevu,  {from: deployAddress, gas:6900000, value:1100000000000000000});
-    deployer.deploy(MvuToken, totalSupply,  {from: deployAddress});
+    deployer.deploy(Oracles,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(OraclesController,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(Admin,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(Events,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(EventsController, {from: deployAddress, gas: gasLimit});
+    deployer.deploy(OracleVerifier,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(Wagers,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(WagersController,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(CustomWagers,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(CustomWagersController,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(CancelController,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(Rewards, {from: deployAddress, gas:gasLimit});
+    deployer.deploy(Mevu,  {from: deployAddress, gas:gasLimit});
+    deployer.deploy(MvuToken, totalSupply,  {from: deployAddress, gas:gasLimit});
 
     deployer.then(function() {   
        return Mevu.deployed();
@@ -56,6 +59,9 @@ module.exports = (deployer, network, accounts) => {
     }).then(function(){ 
         return mevu.setOraclesContract(oracles.address);
     }).then(function(){ 
+        return MvuToken.deployed();
+    }).then(function(instance) {
+        mvuToken = instance;
         return OraclesController.deployed();
     }).then(function(instance){
         oraclesController = instance;
@@ -66,6 +72,8 @@ module.exports = (deployer, network, accounts) => {
         return oraclesController.setEventsContract(events.address);
     }).then(function(){ 
         return oraclesController.setMevuContract(mevu.address);
+    }).then(function(){ 
+        return oraclesController.setMvuTokenContract(mvuToken.address);
     }).then(function(){ 
         return OracleVerifier.deployed();
     }).then(function(instance){
@@ -165,6 +173,21 @@ module.exports = (deployer, network, accounts) => {
         return mevu.grantAuthority(cancelController.address);
     }).then(function(){
         return mevu.grantAuthority(events.address);
+    }).then(function(){
+        return EventsController.deployed();
+    }).then (function (instance) {
+        eventsController = instance;
+        return events.grantAuthority(eventsController.address);
+    }).then(function(){
+        return mevu.grantAuthority(eventsController.address);
+    }).then(function(){
+        return eventsController.setEventsContract(events.address);         
+    }).then(function () {
+        return eventsController.setOracleVerifierContract(oracleVerifier.address);
+    }).then(function () {
+        return eventsController.setAdminContract(admin.address);
+    }).then(function() {
+        return eventsController.setMevuContract(mevu.address);
     });
 
    

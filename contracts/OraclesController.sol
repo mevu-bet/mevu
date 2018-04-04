@@ -60,33 +60,19 @@ contract OraclesController is Ownable {
         _;
     }
 
-    function setOracleVerifContract (address thisAddr) external onlyOwner {
-        oracleVerif  = OracleVerifier(thisAddr);
-    }
+    function setOracleVerifContract (address thisAddr) external onlyOwner { oracleVerif  = OracleVerifier(thisAddr); }
 
-    function setRewardsContract (address thisAddr) external onlyOwner {
-        rewards = Rewards(thisAddr);
-    }
+    function setRewardsContract (address thisAddr) external onlyOwner { rewards = Rewards(thisAddr); }
     
-    function setEventsContract (address thisAddr) external onlyOwner {
-        events = Events(thisAddr);        
-    }  
+    function setEventsContract (address thisAddr) external onlyOwner { events = Events(thisAddr); }  
 
-    function setAdminContract (address thisAddr) external onlyOwner {
-        admin = Admin(thisAddr);
-    }
+    function setAdminContract (address thisAddr) external onlyOwner { admin = Admin(thisAddr); }
 
-    function setOraclesContract (address thisAddr) external onlyOwner {
-        oracles = Oracles(thisAddr);
-    }
+    function setOraclesContract (address thisAddr) external onlyOwner { oracles = Oracles(thisAddr); }
 
-    function setMevuContract (address thisAddr) external onlyOwner {
-        mevu = Mevu(thisAddr);
-    }
+    function setMevuContract (address thisAddr) external onlyOwner { mevu = Mevu(thisAddr); }
 
-    function setMvuTokenContract (address thisAddr) external onlyOwner {
-        mvuToken = MvuToken(thisAddr);
-    }
+    function setMvuTokenContract (address thisAddr) external onlyOwner { mvuToken = MvuToken(thisAddr); }
 
     // function setMevuContract (address thisAddr) external onlyOwner {
     //     mevu = Mevu(thisAddr);
