@@ -11,8 +11,7 @@ contract Events is AuthorityGranter {
 
     event EventVoteReady(bytes32 eventId);
 
-    struct StandardWagerEvent {        
-        bytes32 name;       
+    struct StandardWagerEvent {         
         bytes32 teamOne;
         bytes32 teamTwo;
         uint startTime; // Unix timestamp
@@ -49,15 +48,14 @@ contract Events is AuthorityGranter {
        
 
     /** @dev Creates a new Standard event struct for users to bet on and adds it to the standardEvents mapping.
-      * @param name The name of the event to be diplayed.
+   
       * @param startTime The timestamp of when the event starts
       * @param duration The length of the event in seconds.     
       * @param teamOne The name of one of the participants, eg. Toronto Maple Leafs, Georges St-Pierre, Justin Trudeau.
       * @param teamTwo The name of teamOne's opposition.     
       */
     function makeStandardEvent(
-        bytes32 id,
-        bytes32 name,
+        bytes32 id,        
         uint startTime,
         uint duration,
         bytes32 teamOne,
@@ -69,7 +67,7 @@ contract Events is AuthorityGranter {
         onlyAuth            
     {        
         StandardWagerEvent memory thisEvent;   
-        thisEvent = StandardWagerEvent( name,                                        
+        thisEvent = StandardWagerEvent(                                        
                                         teamOne,
                                         teamTwo,
                                         startTime,
@@ -215,6 +213,13 @@ contract Events is AuthorityGranter {
 
     function getMakerBond (bytes32 eventId) external view returns (uint) {
         return standardEvents[eventId].makerBond;
+    }
+
+    function getTeamOne (bytes32 eventId) external view returns (bytes32) {
+        return standardEvents[eventId].teamOne;
+    }
+    function getTeamTwo (bytes32 eventId) external view returns (bytes32) {
+        return standardEvents[eventId].teamTwo;
     }
 
     function getWinner (bytes32 id) external view returns (uint) {

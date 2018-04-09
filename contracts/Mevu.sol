@@ -24,7 +24,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
     bool public contractPaused = false;
     bool private randomNumRequired = false;  
     int private lastIteratedIndex = -1;  
-    uint private mevuBalance = 0;
+    uint public mevuBalance = 0;
     uint public lotteryBalance = 0;    
    
     uint private oracleServiceFee = 3; //Percent

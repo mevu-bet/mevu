@@ -18,6 +18,9 @@ contract OraclesController is Ownable {
     Oracles oracles;
 
     event OracleRegistered(address oracle, bytes32 eventId);
+    event WithConsensus (address oracle);
+    event AgainstConsensus (address oracle);
+
 
     modifier eventUnlocked(bytes32 eventId){
         require (!events.getLocked(eventId));

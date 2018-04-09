@@ -56,7 +56,7 @@ contract EventsController is Ownable {
     function setMevuContract (address thisAddress) external onlyOwner { mevu = Mevu(thisAddress); }
 
 
-    function makeEvent (bytes32 id, bytes32 name, uint startTime, uint duration, bytes32 teamOne, bytes32 teamTwo)
+    function makeEvent (bytes32 id, uint startTime, uint duration, bytes32 teamOne, bytes32 teamTwo)
         onlyVerified
         isNotMade(id)
         minBond
@@ -64,7 +64,7 @@ contract EventsController is Ownable {
         payable
     {
         require (startTime > 0 && duration > 0);
-        events.makeStandardEvent(id, name, startTime, duration, teamOne, teamTwo, msg.value, msg.sender);
+        events.makeStandardEvent(id, startTime, duration, teamOne, teamTwo, msg.value, msg.sender);
         address(mevu).transfer(msg.value);
     }
 

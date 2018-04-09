@@ -3,6 +3,7 @@ import "./AuthorityGranter.sol";
 
 contract Admin is AuthorityGranter {  
   
+    uint private abandonPeriod = 100000;
     uint private minWagerAmount = 10;
     uint private callbackInterval = 1;     
     uint private minOracleStake = 1;
@@ -18,6 +19,8 @@ contract Admin is AuthorityGranter {
     int private playerDisagreeRepPenalty = 4;
     
     mapping (bytes32 => uint) private minOracleNum;
+
+    function setAbandonPeriod(uint newPeriod) external onlyAuth { abandonPeriod = newPeriod; }
 
     function setEventMakerFinalizeCushion(uint newCushion) external onlyAuth { eventMakerFinalizeCushion = newCushion; }    
 
@@ -50,6 +53,8 @@ contract Admin is AuthorityGranter {
       * @param minWager The new required minimum amount of ETH to make a wager.
       */
     function setMinWagerAmount(uint256 minWager) external onlyAuth { minWagerAmount = minWager; }
+
+    function getAbandonPeriod() external view returns (uint) { return abandonPeriod; } 
     
     function getCallbackGasLimit() external view returns (uint) { return callbackGasLimit; }  
     
