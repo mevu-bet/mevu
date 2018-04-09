@@ -274,19 +274,19 @@ contract('Mevu', function (accounts) {
             var start = new Date().getTime()/1000;
 
             await eventsController.makeEvent(web3.sha3("test_event2"),
-                web3.sha3("test_event2"),
+               
                 start,
                 20,
                 web3.sha3("team1"),
                 web3.sha3("team2"), {value: 10000}).should.be.fulfilled;
             await eventsController.makeEvent(web3.sha3("test_event3"),
-                web3.sha3("test_event3"),
+             
                 start,
                 1,
                 web3.sha3("team1"),
                 web3.sha3("team2"), {value:10000}).should.be.fulfilled;
             await eventsController.makeEvent(web3.sha3("test_event5"),
-                web3.sha3("test_event5"),
+              
                 latestTime(),
                 4000,
                 web3.sha3("team1"),
@@ -312,7 +312,7 @@ contract('Mevu', function (accounts) {
 
         it('should prevent non-oracles from creating events', async function () {
             await eventsController.makeEvent(web3.sha3("test_event2"),
-                web3.sha3("test_event2"),
+               
                 1512519349,
                 6000,
                 web3.sha3("team1"),
@@ -357,18 +357,19 @@ contract('Mevu', function (accounts) {
     describe('making wagers -- ', function () {
         it("it should let anyone make a wager", async function () {
             let balanceA = web3.eth.getBalance(accounts[0]).valueOf();
-            await wagersController.makeWager(web3.sha3("wager1"), wagerAmount, web3.sha3("test_event2"), 100, 1, { value: wagerAmount }).should.be.fulfilled;
+            await wagersController.makeWager(web3.sha3("wager1"),  web3.sha3("test_event2"), wagerAmount, 100, 1, { value: wagerAmount }).should.be.fulfilled;
             let maker = await wagers.getMaker(web3.sha3("wager1"));
             maker.should.equal(accounts[0]);
             let newBalance = web3.eth.getBalance(accounts[0]).valueOf();
             let diff = balanceA - newBalance;
             diff.should.be.above(wagerAmount);
 
-            await wagersController.makeWager(web3.sha3("wager2"), wagerAmount, web3.sha3("test_event2"), 100, 1, { from: accounts[2], value: wagerAmount }).should.be.fulfilled;
+            await wagersController.makeWager(web3.sha3("wager2"),  web3.sha3("test_event2"), wagerAmount, 100, 1, { from: accounts[2], value: wagerAmount }).should.be.fulfilled;
 
             // wager to cancel without being taken
-            await wagersController.makeWager(web3.sha3("wager3"), wagerAmount, web3.sha3("test_event2"), 100, 1, { from: accounts[5], value: wagerAmount }).should.be.fulfilled;
-            await wagersController.makeWager(web3.sha3("wager4"), wagerAmount, web3.sha3("test_event2"), 100, 1, { from: accounts[7], value: wagerAmount }).should.be.fulfilled;
+            await wagersController.makeWager(web3.sha3("wager3"),  web3.sha3("test_event2"),wagerAmount, 100, 1, { from: accounts[5], value: wagerAmount }).should.be.fulfilled;
+            await wagersController.makeWager(web3.sha3("wager4"), web3.sha3("test_event2"),wagerAmount, 100, 1, { from: accounts[7], value: wagerAmount }).should.be.fulfilled;
+            await wagersController.makeWager(web3.sha3("wager5"), web3.sha3("test_event5"),wagerAmount, 100, 1, { from: accounts[8], value: wagerAmount }).should.be.fulfilled;
         });
 
         it("it should let anyone make a custom wager with no judge", async function () {
@@ -398,6 +399,7 @@ contract('Mevu', function (accounts) {
             taker.should.equal(accounts[1]);
 
             await wagersController.takeWager(web3.sha3("wager2"), { from: accounts[3], value: wagerAmount }).should.be.fulfilled;
+            await wagersController.takeWager(web3.sha3("wager5"), { from: accounts[9], value: wagerAmount }).should.be.fulfilled;
         });
 
         it("it should let anyone take a custom wager", async function () {
@@ -474,6 +476,7 @@ contract('Mevu', function (accounts) {
             vote.valueOf().should.equal('1');
 
             await wagersController.submitVote(web3.sha3("wager2"), 1, { from: accounts[2], gasPrice: 2000000000 }).should.be.fulfilled;
+          
         });
 
         it("should prevent non-bettors from voting", async function () {
@@ -508,6 +511,9 @@ contract('Mevu', function (accounts) {
             let winner = await events.getWinner(web3.sha3("test_event2")).should.be.fulfilled;
             winner.valueOf().should.equal('0');
         });
+
+        271026000003072
+        10000000000000000
 
 
         it("should accept oracle votes and tokens for verified oracles for voteReady event", async function () {
@@ -609,6 +615,22 @@ contract('Mevu', function (accounts) {
             console.log("winner: " + winner);
         });
 
+    });
+
+    describe('in the event that a min oracle num is not selected and no oracles vote or there are not enough oracles -- ', function () {
+        it("should abort a disputed or one-sided (only one player reported) bet that is finalized", async function () {
+            await increaseTimeTo(latestTime() + 6025);
+            await wagersController.submitVote(web3.sha3("wager5"), 1, { from: accounts[8], gasPrice: 2000000000 }).should.be.fulfilled;
+            let balance = await rewards.getUnlockedEthBalance(accounts[8]);
+            await increaseTimeTo(latestTime() + 110025);
+            await wagersController.submitVote(web3.sha3("wager5"), 1, { from: accounts[8], gasPrice: 2000000000 }).should.be.fulfilled;
+           
+            let newBalance = await rewards.getUnlockedEthBalance(accounts[8]);
+            let diff = newBalance - balance;
+            diff.should.be.within(wagerAmount-(wagerAmount/10), wagerAmount);
+
+
+        });
     });
 
     describe('cancelling wagers -- ', function () {
