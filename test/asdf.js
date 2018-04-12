@@ -117,11 +117,14 @@ contract('Player-Standard', function (accounts) {
       await increaseTimeTo(latestTime() + 2);
       let voteReady = await events.getVoteReady(web3.sha3("event1"));
       voteReady.should.equal(true);
+      // should not be necessary, TODO	    
+      await mevu.restartContract(1);
+      await increaseTimeTo(latestTime() + 2);
       console.log(await !mevu.getContractPaused());
       console.log(await wagers.getMaker(web3.sha3('wager1')));
       console.log(accounts[1]);
       await wagersController.submitVote(web3.sha3('event1'), 1, { from: accounts[1] }).should.be.fulfilled;
-      console.log("fuck")
+      console.log("vote submitted")
       await wagersController.submitVote(web3.sha3('event1'), 1, { from: accounts[2] }).should.be.fulfilled;
       let makerWin = await wagers.getMakerWinVote(web3.sha3("wager1"));
       let takerWin = await wagers.getTakerWinVote(web3.sha3("wager1"));
