@@ -331,4 +331,54 @@ contract('Player-Standard', function (accounts) {
     unlockedBalance2.should.be.above((wagerAmount));
   });
 
+  it('should let player make bet, loser doesnt report, oracles vote', async function() {
+    let initialbalance1 = Number(web3.eth.getBalance(accounts[11]).valueOf());
+    let initialbalance2 = Number(web3.eth.getBalance(accounts[12]).valueOf());
+    await eventController.makeEvent(web3.sha3('event7'),
+                                    now,
+                                    1,
+                                    web3.sha3('team1'),
+                                    web3.sha3('team2'),
+                              {value: 10000}).should.be.fulfilled;
+    await wagersController.makeWager(web3.sha3('wager7'),
+                                      web3.sha3('event7'),
+                                wagerAmount,
+                                      100,
+                                      1,
+                                      {
+                                        from: accounts[11],
+                                        value: wagerAmount,
+                                        gasPrice: testGasPrice
+                                      }).should.be.fulfilled;
+    await wagersController.takeWager(web3.sha3('wager7'),
+                                      {
+                                        from: accounts[12],
+                                        value: wagerAmount,
+                                        gasPrice: testGasPrice
+                                      }).should.be.fulfilled;
+
+
+    await increaseTimeTo(latestTime() + 2);
+    let newbalance1 = Number(web3.eth.getBalance(accounts[11]).valueOf());
+    let newbalance2 = Number(web3.eth.getBalance(accounts[12]).valueOf());
+    let diff1 = initialbalance1-newbalance1;
+    let diff2 = initialbalance2-newbalance2;
+    diff1.should.be.above(wagerAmount);
+    diff1.should.be.below(wagerAmount+gasAllowance);
+    diff2.should.be.above(wagerAmount);
+    diff2.should.be.below(wagerAmount+gasAllowance);
+    await increaseTimeTo(latestTime() + 2);
+    let voteReady = await events.getVoteReady(web3.sha3("event7"));
+    voteReady.should.equal(true);
+    await wagersController.submitVote(web3.sha3('wager7'), 1, { from: accounts[11], gasPrice: testGasPrice }).should.be.fulfilled;
+    let finished = await mevu.getContractPaused();
+    finished.should.equal(false);
+    await increaseTimeTo(latestTime() + 1801);
+    await eventsController.finalizeEvent(web3.sha3('event7'));
+    await oraclesController.registerOracle(web3.sha3("event3"), 1, 1, { from: accounts[0] });
+    await wagersController.submitVote(web3.sha3('wager7'), 1, { from: accounts[11], gasPrice: testGasPrice }).should.be.fulfilled;
+
+
+  });
+
 });
