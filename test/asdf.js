@@ -78,8 +78,8 @@ contract('Player-Standard', function (accounts) {
     });
 	  
     it('should let player make bet, report outcome and payout', async function() {
-      let initialbalance1 = web3.eth.getBalance(accounts[1]).valueOf();
-      let initialbalance2 = web3.eth.getBalance(accounts[2]).valueOf();
+      let initialbalance1 = Number(web3.eth.getBalance(accounts[1]).valueOf());
+      let initialbalance2 = Number(web3.eth.getBalance(accounts[2]).valueOf());
       await eventController.makeEvent(web3.sha3('event1'),
                                       now,
                                       1,
@@ -94,53 +94,48 @@ contract('Player-Standard', function (accounts) {
                                         {
 					  from: accounts[1],	
                                           value: wagerAmount,
-					  // gasPrice: testGasPrice	
+					  gasPrice: testGasPrice	
                                         }).should.be.fulfilled;
       await wagersController.takeWager(web3.sha3('wager1'),
                                         {
                                           from: accounts[2],
                                           value: wagerAmount,
-					  // gasPrice: testGasPrice	
+					  gasPrice: testGasPrice	
                                         }).should.be.fulfilled;
 
 
       await increaseTimeTo(latestTime() + 2);
-      let newbalance1 = web3.eth.getBalance(accounts[1]).valueOf();
-      let newbalance2 = web3.eth.getBalance(accounts[2]).valueOf();
+      let newbalance1 = Number(web3.eth.getBalance(accounts[1]).valueOf());
+      let newbalance2 = Number(web3.eth.getBalance(accounts[2]).valueOf());
       let diff1 = initialbalance1-newbalance1;
       let diff2 = initialbalance2-newbalance2;
       diff1.should.be.above(wagerAmount);
-      // diff1.should.be.below(wagerAmount+gasAllowance);
+      diff1.should.be.below(wagerAmount+gasAllowance);
       diff2.should.be.above(wagerAmount);
-      // diff2.should.be.below(wagerAmount+gasAllowance);
+      diff2.should.be.below(wagerAmount+gasAllowance);
       
       await increaseTimeTo(latestTime() + 2);
       let voteReady = await events.getVoteReady(web3.sha3("event1"));
       voteReady.should.equal(true);
-      // should not be necessary, TODO	    
-      await mevu.restartContract(1);
-      await increaseTimeTo(latestTime() + 2);
-      console.log(await !mevu.getContractPaused());
-      console.log(await wagers.getMaker(web3.sha3('wager1')));
-      console.log(accounts[1]);
-      await wagersController.submitVote(web3.sha3('event1'), 1, { from: accounts[1] }).should.be.fulfilled;
-      console.log("vote submitted")
-      await wagersController.submitVote(web3.sha3('event1'), 1, { from: accounts[2] }).should.be.fulfilled;
+      await wagersController.submitVote(web3.sha3('wager1'), 1, { from: accounts[1], gasPrice: testGasPrice }).should.be.fulfilled;
+      let finished = await mevu.getContractPaused();
+      finished.should.equal(false);  
+      await wagersController.submitVote(web3.sha3('wager1'), 1, { from: accounts[2], gasPrice: testGasPrice }).should.be.fulfilled;
       let makerWin = await wagers.getMakerWinVote(web3.sha3("wager1"));
       let takerWin = await wagers.getTakerWinVote(web3.sha3("wager1"));
-      makerWin.valueOf().should.be('1');
-      takerWin.valueOf().should.be('1');
+      makerWin.valueOf().should.equal('1');
+      takerWin.valueOf().should.equal('1');
+      let finalbalance1 = Number(web3.eth.getBalance(accounts[1]).valueOf());
+      let finalbalance2 = Number(web3.eth.getBalance(accounts[2]).valueOf());	    
+      let finaldiff1 = finalbalance1-newbalance1;
+      let finaldiff2 = newbalance2-finalbalance2;
+      finaldiff1.should.be.above((2*wagerAmount)-(wagerAmount/50)-gasAllowance);
+      finaldiff1.should.be.below((2*wagerAmount)-(wagerAmount/50));
+      finaldiff2.should.be.below(gasAllowance);
+      finaldiff2.should.be.above(0);	    
     });
 
   });
-
-  function wait(ms) {
-      var start = new Date().getTime();
-      var end = start;
-      while (end < start + ms) {
-          end = new Date().getTime();
-      }
-  }
 
 });
 
