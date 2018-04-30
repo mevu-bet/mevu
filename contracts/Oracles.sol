@@ -1,8 +1,11 @@
 pragma solidity ^0.4.18;
 //import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./AuthorityGranter.sol";
+import './Events.sol';
 
 contract Oracles is AuthorityGranter {  
+
+    Events events;
 
     struct OracleStruct { 
         bytes32 eventId;
@@ -20,8 +23,11 @@ contract Oracles is AuthorityGranter {
         uint stakeForOne;
         uint stakeForTwo;
         uint stakeForThree;
+        uint currentWinner;
         mapping (address => uint) oracleStakes;
         address[] oracles;  
+       
+        bool threshold;
     }
 
     uint private oracleServiceFee = 3; //Percent
@@ -35,6 +41,10 @@ contract Oracles is AuthorityGranter {
     address[] private correctOracles;
     bytes32[] private correctStructs;
 
+    function setEventsContract (address thisAddress) external onlyOwner {
+        events = Events(thisAddress);
+    }
+
     
 
     function removeOracle (address oracle, bytes32 eventId) external onlyAuth {
@@ -44,7 +54,7 @@ contract Oracles is AuthorityGranter {
         oracleStructs[oracle][eventId] = thisOracle;    
     }
 
-    function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote) external onlyAuth {
+    function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote, uint minOracleNum) external onlyAuth {
         OracleStruct memory thisOracle; 
         thisOracle = OracleStruct (eventId, mvuStake, winnerVote, false);      
         oracleStructs[oracle][eventId] = thisOracle;
@@ -62,8 +72,33 @@ contract Oracles is AuthorityGranter {
         }
         eventStructs[eventId].oracleStakes[oracle] = mvuStake;
         eventStructs[eventId].totalOracleStake += mvuStake;
-        eventStructs[eventId].oracleVotes += 1;           
-    }  
+        eventStructs[eventId].oracleVotes += 1;
+        setCurrentWinner(eventId); 
+
+        if (eventStructs[eventId].oracleVotes == minOracleNum) {
+            eventStructs[eventId].threshold = true;
+            events.setThreshold(eventId);
+        }    
+    } 
+
+    function setCurrentWinner (bytes32 eventId) {
+        if  (eventStructs[eventId].votesForOne == eventStructs[eventId].votesForTwo) {
+            eventStructs[eventId].currentWinner = 3;
+            events.setCurrentWinner(eventId, 3);
+        }
+        if  (eventStructs[eventId].votesForOne > eventStructs[eventId].votesForTwo) {
+            eventStructs[eventId].currentWinner = 1;
+            events.setCurrentWinner(eventId, 1);
+        }
+        if  (eventStructs[eventId].votesForTwo > eventStructs[eventId].votesForOne) {
+            eventStructs[eventId].currentWinner = 2;
+            events.setCurrentWinner(eventId, 2);
+        }
+        if  (eventStructs[eventId].votesForThree > eventStructs[eventId].votesForOne  &&  eventStructs[eventId].votesForThree > eventStructs[eventId].votesForTwo) {
+            eventStructs[eventId].currentWinner = 3;
+            events.setCurrentWinner(eventId, 3);
+        }
+    } 
 
 
     function addToOracleList (address oracle) external onlyAuth { oracleList.push(oracle); } 
@@ -75,6 +110,8 @@ contract Oracles is AuthorityGranter {
     function setRefunded (address oracle, bytes32 eventId) external onlyAuth { refundClaimed[oracle][eventId] = true; }
 
     function setRegistered (address oracle, bytes32 eventId) external onlyAuth { alreadyRegistered[oracle][eventId] = true; }
+
+    function getCurrentWinner (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].currentWinner; } 
 
     function getRegistered (address oracle, bytes32 eventId) external view returns (bool) { return alreadyRegistered[oracle][eventId]; }
 
@@ -103,6 +140,8 @@ contract Oracles is AuthorityGranter {
     function getOracleVotesNum (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].oracleVotes; }   
 
     function getTotalOracleStake (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].totalOracleStake; }
+
+    function getThreshold (bytes32 eventId) external view returns (bool) { return eventStructs[eventId].threshold; } 
  
     function getOracleListLength() external  view returns (uint) { return oracleList.length; }
 

@@ -30,8 +30,8 @@ contract EventsController is Ownable {
         _;
     }
 
-    modifier notLocked(bytes32 eventId) {
-        require (!events.getLocked(eventId));
+    modifier isActive(bytes32 eventId) {
+        require (events.getActive(eventId));
         _;
     }
 
@@ -66,12 +66,13 @@ contract EventsController is Ownable {
         require (startTime > 0 && duration > 0);
         events.makeStandardEvent(id, startTime, duration, teamOne, teamTwo, msg.value, msg.sender);
         address(mevu).transfer(msg.value);
+        admin.setMinOracleNum(id,1);
     }
 
    
 
     // Called by event creator to finalize bet and remove from active array, if not called within win claim period then anyone can call and steal creators bond money
-    function finalizeEvent (bytes32 eventId) oraclePeriodOver(eventId) notLocked(eventId) external {
+    function finalizeEvent (bytes32 eventId) oraclePeriodOver(eventId) isActive(eventId) external {
         if (block.timestamp < events.getEndTime(eventId) + admin.getOraclePeriod() + admin.getEventMakerFinalizeCushion()) {
             require(msg.sender == events.getMaker(eventId));
             events.finalizeEvent(eventId);

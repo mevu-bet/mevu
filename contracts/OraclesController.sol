@@ -63,6 +63,11 @@ contract OraclesController is Ownable {
         _;
     }
 
+    modifier thresholdReached (bytes32 eventId) {
+        require (oracles.getThreshold(eventId));
+        _;
+    }
+
     function setOracleVerifContract (address thisAddr) external onlyOwner { oracleVerif  = OracleVerifier(thisAddr); }
 
     function setRewardsContract (address thisAddr) external onlyOwner { rewards = Rewards(thisAddr); }
@@ -108,7 +113,7 @@ contract OraclesController is Ownable {
         oracles.setLastEventOraclized(msg.sender, eventId) ;
         //transferTokensToMevu(msg.sender, mvuStake);
         mvuToken.transferFrom(msg.sender, address(this), mvuStake);       
-        oracles.addOracle (msg.sender, eventId, mvuStake, winnerVote);                  
+        oracles.addOracle (msg.sender, eventId, mvuStake, winnerVote, admin.getMinOracleNum(eventId));                  
         rewards.addMvu(msg.sender, mvuStake);     
         OracleRegistered(msg.sender, eventId);     
                          
@@ -119,6 +124,7 @@ contract OraclesController is Ownable {
         onlyOracle(eventId)
         notClaimed(eventId)
         eventLocked(eventId)
+        thresholdReached(eventId)
     {
         oracles.setPaid(msg.sender, eventId);
         uint ethReward;
@@ -144,7 +150,8 @@ contract OraclesController is Ownable {
         stakePercentage /= (oracles.getTotalOracleStake(eventId) - mvuRewardPool);
         mvuRewardPool /= 2; 
 
-        if (oracles.getWinnerVote(eventId, msg.sender) == events.getWinner(eventId)) {
+
+        if (oracles.getWinnerVote(eventId, msg.sender) == events.getCurrentWinner(eventId)) {
             ethReward = (totalRewardPool/100000) * stakePercentage;
             rewards.addUnlockedEth(msg.sender, ethReward);             
             rewards.addEth(msg.sender, ethReward);
@@ -152,12 +159,14 @@ contract OraclesController is Ownable {
             rewards.addMvu(msg.sender, mvuReward);
             mvuReward += oracles.getMvuStake(eventId, msg.sender);
             rewards.addUnlockedMvu(msg.sender, mvuReward);
-            rewards.addOracleRep(msg.sender, admin.getOracleRepReward());             
+            rewards.addOracleRep(msg.sender, admin.getOracleRepReward());       
+            WithConsensus(msg.sender);      
         } else {
             mvuReward = oracles.getMvuStake(eventId, msg.sender)/2;
             rewards.subMvu(msg.sender, mvuReward);
             rewards.addUnlockedMvu(msg.sender, mvuReward);
             rewards.subOracleRep(msg.sender, admin.getOracleRepPenalty());
+            AgainstConsensus(msg.sender);
         }
     }
 

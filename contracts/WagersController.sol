@@ -7,12 +7,14 @@ import "./Events.sol";
 import "./Rewards.sol";
 import "./Mevu.sol";
 
+
 contract WagersController is Ownable {
     Admin admin;
     Events events;
     Rewards rewards;
     Wagers wagers;
     Mevu mevu;
+
 
     event WagerMade(bytes32 id); 
     event WagerTaken(bytes32 id);    
@@ -71,7 +73,7 @@ contract WagersController is Ownable {
 
     function setMevuContract (address thisAddr) external onlyOwner { mevu = Mevu(thisAddr); }
 
-
+ 
     function makeWager(
         bytes32 wagerId,            
         bytes32 eventId,
@@ -137,7 +139,7 @@ contract WagersController is Ownable {
         onlyBettor(wagerId) 
         notPaused 
     {
-        require(events.getFinished(eventId));
+        require(events.getVoteReady(eventId));
         require (!wagers.getSettled(wagerId));
         bytes32 eventId = wagers.getEventId(wagerId);
         if (msg.sender == wagers.getMaker(wagerId)) {        
@@ -145,23 +147,48 @@ contract WagersController is Ownable {
         } else {
             wagers.setTakerWinVote (wagerId, winnerVote);            
         }
-        uint eventWinner = events.getWinner(eventId);        
-        if (eventWinner != 0 && eventWinner < 3) {
-            lateSettle(wagerId, eventWinner);
-            lateSettledPayout(wagerId);                          
-        } else {
-            if (events.getCancelled(eventId) || events.getWinner(eventId) > 2) {
-                abortWager(wagerId);                
+        uint eventWinner = events.getCurrentWinner(eventId);        
+        // if (eventWinner != 0 && eventWinner < 3) {
+        //     lateSettle(wagerId, eventWinner);
+        //     lateSettledPayout(wagerId);                          
+        // } else {
+
+        if (block.timestamp > events.getEndTime(eventId) + admin.getOraclePeriod()) {
+            if (events.getCurrentWinner(eventId) != 0) { 
+                lateSettle(wagerId, eventWinner);
+                lateSettledPayout(wagerId);   
+
             } else {
-                if (wagers.getTakerWinVote(wagerId) != 0 && wagers.getMakerWinVote(wagerId) != 0) {
-                    settle(wagerId);                                    
-                } else {
-                    if (block.timestamp > (events.getEndTime(eventId) + admin.getAbandonPeriod()) && eventWinner == 0) {
-                        abortWager(wagerId);
-                    }
-                }
+                abortWager(wagerId);
             }
-        }
+        } 
+         else {
+             if (wagers.getTakerWinVote(wagerId) != 0 && wagers.getMakerWinVote(wagerId) != 0) {
+                // if (wagers.getTakerWinVote(wagerId) == wagers.getMakerWinVote(wagerId)) {
+                     settle(wagerId, eventId);
+               //  } 
+                 //else {
+        //             if (events.getThreshold(eventId)) {
+        //                 lateSettle(wagerId, eventWinner);
+        //                 lateSettledPayout(wagerId);   
+        //             }
+        //         }
+             }
+         }
+
+
+        //     if (events.getCancelled(eventId) || events.getWinner(eventId) > 2) {
+        //         abortWager(wagerId);                
+        //     } else {
+        //         if (wagers.getTakerWinVote(wagerId) != 0 && wagers.getMakerWinVote(wagerId) != 0) {
+        //             settle(wagerId);                                    
+        //         } else {
+        //             if (block.timestamp > (events.getEndTime(eventId) + admin.getAbandonPeriod()) && eventWinner == 0) {
+        //                 abortWager(wagerId);
+        //             }
+        //         }
+        //     }
+        // }
 
         // If the event is over, and the oracle period is over but it hasn't been finalized, and then a user who has already reported  who wishes to report again does so (despite a front-end warning that
         // it will result in a refund and not winnings if the event hasn't been finalized with a winner. If the event maker cushion is over the front end will give the option of stealing the bond
@@ -176,7 +203,7 @@ contract WagersController is Ownable {
     /** @dev Settles the wager if both the maker and taker have voted, pays out if they agree, otherwise they need to wait for oracle settlement.               
       * @param wagerId bytes32 id for the wager.         
       */
-    function settle(bytes32 wagerId) internal {
+    function settle(bytes32 wagerId, bytes32 eventId) internal {
         address maker = wagers.getMaker(wagerId);
         address taker = wagers.getMaker(wagerId);
         uint origValue = wagers.getOrigValue(wagerId);
@@ -200,7 +227,21 @@ contract WagersController is Ownable {
                 }
             }
             payout(wagerId, maker, taker, payoutValue);
-        }     
+        } else {
+           
+             if (events.getCurrentWinner(eventId) != 0) { 
+                lateSettle(wagerId, events.getCurrentWinner(eventId));
+                lateSettledPayout(wagerId);   
+
+            }
+        }
+        //     bytes32 eventId = wagers.getEventId(wagerId);
+        //     if (oracles.getThreshold(eventId)) {
+        //         if (oracles.getCurrentWinner(eventId) == 1 || oracles.getCurrentWinner(eventId) == 2) {
+        //             lateSettle(wagerId, oracles.getCurrentWinner(eventId));
+        //         }
+        //     }
+        // }     
     }
 
     function lateSettle (bytes32 wagerId, uint eventWinner) internal {
@@ -249,7 +290,7 @@ contract WagersController is Ownable {
     function lateSettledPayout(bytes32 wagerId) internal {        
         require(!wagers.getSettled(wagerId));
         wagers.setSettled(wagerId);
-        wagers.setLocked(wagerId);   
+        //wagers.setLocked(wagerId);   
         uint origValue = wagers.getOrigValue(wagerId);
         uint winningValue = wagers.getWinningValue(wagerId);
         uint payoutValue = winningValue;         

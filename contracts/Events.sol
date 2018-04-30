@@ -18,18 +18,21 @@ contract Events is AuthorityGranter {
         uint duration; // Seconds
         uint numWagers;
         uint totalAmountBet;
-        uint totalAmountResolvedWithoutOracles;          
+        uint totalAmountResolvedWithoutOracles;
+        uint currentWinner;
         uint winner;
         uint makerBond;       
         uint activeEventIndex;
         address maker;
-        bytes32[] wagers;                      
-        bool locked;       
+        bytes32[] wagers;        
         bool cancelled;
+        bool threshold;
+      
     }
    
     
     mapping (bytes32 => StandardWagerEvent) private standardEvents;
+    mapping (bytes32 => bool) private activeEventsMapping;
     bytes32[] private emptyBytes32Array;
     bytes32[] public activeEvents;
     uint public eventsCount;
@@ -76,15 +79,17 @@ contract Events is AuthorityGranter {
                                         0,                                    
                                         0,
                                         0,
+                                        0,
                                         bondValue,                                                                                                              
                                         activeEvents.length,
                                         maker,  
-                                        emptyBytes32Array,                                                                                                                                                                                            
-                                        false,                                       
+                                        emptyBytes32Array,                                                                                                    
+                                        false,
                                         false);
         standardEvents[id] = thisEvent;
         eventsCount++;
         activeEvents.push(id);
+        activeEventsMapping[id] = true;
         //mevu.addEventToIterator();     
     }
 
@@ -109,31 +114,37 @@ contract Events is AuthorityGranter {
     // }
 
     function finalizeEvent(bytes32 eventId) external onlyAuth {
-        decideWinner(eventId);
-        setLocked(eventId);
+        decideWinner(eventId);      
         removeEventFromActive(eventId);
     }
 
     function decideWinner (bytes32 eventId) internal {      
-        uint teamOneCount = oracles.getVotesForOne(eventId);
-        uint teamTwoCount = oracles.getVotesForTwo(eventId);
-        uint tieCount = oracles.getVotesForThree(eventId);    
-        if (teamOneCount > teamTwoCount && teamOneCount > tieCount){
-           setWinner(eventId, 1);
+        // uint teamOneCount = oracles.getVotesForOne(eventId);
+        // uint teamTwoCount = oracles.getVotesForTwo(eventId);
+        // uint tieCount = oracles.getVotesForThree(eventId);    
+        // if (teamOneCount > teamTwoCount && teamOneCount > tieCount){
+        //    setWinner(eventId, 1);
+        // } else {
+        //     if (teamTwoCount > teamOneCount && teamTwoCount > tieCount){
+        //     setWinner(eventId, 2);
+        //     } else {
+        //         if (tieCount > teamTwoCount && tieCount > teamOneCount){
+        //             setWinner(eventId, 3);// Tie
+        //         } else {
+        //             setWinner(eventId, 4); // No clear winner
+        //         }
+        //     }
+        // }
+        // if (oracles.getOracleVotesNum(eventId) < admin.getMinOracleNum(eventId)){
+        //     setWinner(eventId, 4); // No clear winner
+        // }
+
+        if (oracles.getThreshold(eventId)) {
+            setWinner(eventId, oracles.getCurrentWinner(eventId));
+
         } else {
-            if (teamTwoCount > teamOneCount && teamTwoCount > tieCount){
-            setWinner(eventId, 2);
-            } else {
-                if (tieCount > teamTwoCount && tieCount > teamOneCount){
-                    setWinner(eventId, 3);// Tie
-                } else {
-                    setWinner(eventId, 4); // No clear winner
-                }
-            }
+            setWinner(eventId, 4); // No clear winner
         }
-          if (oracles.getOracleVotesNum(eventId) < admin.getMinOracleNum(eventId)){
-             setWinner(eventId, 4); // No clear winner
-         }
     }     
 
 
@@ -143,6 +154,7 @@ contract Events is AuthorityGranter {
         activeEvents[indexToDelete] = activeEvents[lastItem]; // Write over item to delete with last item
         standardEvents[activeEvents[lastItem]].activeEventIndex = indexToDelete; //Point what was the last item to its new spot in array      
         activeEvents.length -- ; // Delete what is now duplicate entry in last spot
+        activeEventsMapping[eventId] = false;
     }
 
     function removeWager (bytes32 eventId, uint value) external onlyAuth {
@@ -155,85 +167,48 @@ contract Events is AuthorityGranter {
         standardEvents[eventId].totalAmountBet += value;
     }
 
-    function setWinner (bytes32 eventId, uint winner) public onlyAuth {
-        standardEvents[eventId].winner = winner;        
-    }  
-    
-    function setLocked (bytes32 eventId) public onlyAuth {
-        standardEvents[eventId].locked = true;        
-    }
+    function setCurrentWinner(bytes32 eventId, uint newWinner) external onlyAuth { standardEvents[eventId].currentWinner = newWinner; }
 
-    function getFinished (bytes32 eventId) external view returns (bool) {
-        return (block.timestamp > getEndTime(eventId));
-    } 
+    function setWinner (bytes32 eventId, uint winner) public onlyAuth { standardEvents[eventId].winner = winner; }
+
+    function setThreshold (bytes32 eventId) external onlyAuth { standardEvents[eventId].threshold = true; }
+
+    function getActive(bytes32 id) external view returns (bool) { return activeEventsMapping[id]; }  
   
-    function getActiveEventId (uint i) external view returns (bytes32) {
-        return activeEvents[i];
-    }
+    function getActiveEventId (uint i) external view returns (bytes32) { return activeEvents[i]; }
 
-    function getActiveEventsLength () external view returns (uint) {
-        return activeEvents.length;
-    } 
+    function getActiveEventsLength () external view returns (uint) { return activeEvents.length; } 
 
-    function getStandardEventCount () external view returns (uint) {
-        return eventsCount;
-    }   
+    function getStandardEventCount () external view returns (uint) { return eventsCount; }   
 
-    function getTotalAmountBet (bytes32 eventId) external view returns (uint) {
-        return standardEvents[eventId].totalAmountBet;
-    }
+    function getTotalAmountBet (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].totalAmountBet; }
 
-    function getTotalAmountResolvedWithoutOracles (bytes32 eventId) external view returns (uint) {
-        return standardEvents[eventId].totalAmountResolvedWithoutOracles;
-    }
+    function getTotalAmountResolvedWithoutOracles (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].totalAmountResolvedWithoutOracles; }
 
-    function getCancelled(bytes32 id) external view returns (bool) {
-        return standardEvents[id].cancelled;
-    }
+    function getCancelled(bytes32 id) external view returns (bool) { return standardEvents[id].cancelled; }
 
-    function getStart (bytes32 id) public view returns (uint) {
-        return standardEvents[id].startTime;
-    }
+    function getCurrentWinner (bytes32 id) external view returns (uint) {return standardEvents[id].currentWinner;}
 
-    function getDuration (bytes32 id) public view returns (uint) {
-        return standardEvents[id].duration;
-    }
+    function getStart (bytes32 id) public view returns (uint) { return standardEvents[id].startTime; }
 
-    function getEndTime (bytes32 id) public view returns (uint) {
-        return (standardEvents[id].startTime + standardEvents[id].duration);
-    }
+    function getDuration (bytes32 id) public view returns (uint) { return standardEvents[id].duration; }
 
-    function getLocked(bytes32 id) public view returns (bool) {
-        return standardEvents[id].locked;
-    }
+    function getEndTime (bytes32 id) public view returns (uint) { return (standardEvents[id].startTime + standardEvents[id].duration); }
 
-    function getMaker (bytes32 eventId) external view returns (address) {
-        return standardEvents[eventId].maker;
-    }
+    function getLocked(bytes32 id) public view returns (bool) { return (block.timestamp > getEndTime(id) + admin.getOraclePeriod()); }
 
-    function getMakerBond (bytes32 eventId) external view returns (uint) {
-        return standardEvents[eventId].makerBond;
-    }
+    function getMaker (bytes32 eventId) external view returns (address) { return standardEvents[eventId].maker; }
 
-    function getTeamOne (bytes32 eventId) external view returns (bytes32) {
-        return standardEvents[eventId].teamOne;
-    }
-    function getTeamTwo (bytes32 eventId) external view returns (bytes32) {
-        return standardEvents[eventId].teamTwo;
-    }
+    function getMakerBond (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].makerBond; }
 
-    function getWinner (bytes32 id) external view returns (uint) {
-        return standardEvents[id].winner;
-    }
+    function getTeamOne (bytes32 eventId) external view returns (bytes32) { return standardEvents[eventId].teamOne; }
 
-    function getVoteReady (bytes32 id) public view returns (bool) {        //return standardEvents[id].voteReady;
-        return ((standardEvents[id].startTime + standardEvents[id].duration) < block.timestamp);
-    }
+    function getTeamTwo (bytes32 eventId) external view returns (bytes32) { return standardEvents[eventId].teamTwo; }
 
-    // function makeVoteReady (bytes32 id) internal {
-    //     standardEvents[id].voteReady = true;
-    // }
+    function getThreshold (bytes32 eventId) external view returns (bool) { return standardEvents[eventId].threshold; }
 
-    
+    function getWinner (bytes32 id) external view returns (uint) { return standardEvents[id].winner; }
+
+    function getVoteReady (bytes32 id) public view returns (bool) { return (getEndTime(id) < block.timestamp); }   
 
 }
