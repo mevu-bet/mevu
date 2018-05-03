@@ -334,14 +334,14 @@ contract('Player-Standard', function (accounts) {
   it('should let player make bet, loser doesnt report, oracles vote', async function() {
     let initialbalance1 = Number(web3.eth.getBalance(accounts[11]).valueOf());
     let initialbalance2 = Number(web3.eth.getBalance(accounts[12]).valueOf());
-    await eventController.makeEvent(web3.sha3('event7'),
+    await eventController.makeEvent(web3.sha3('event6'),
                                     now,
                                     1,
                                     web3.sha3('team1'),
                                     web3.sha3('team2'),
                               {value: 10000}).should.be.fulfilled;
-    await wagersController.makeWager(web3.sha3('wager7'),
-                                      web3.sha3('event7'),
+    await wagersController.makeWager(web3.sha3('wager6'),
+                                      web3.sha3('event6'),
                                 wagerAmount,
                                       100,
                                       1,
@@ -350,7 +350,7 @@ contract('Player-Standard', function (accounts) {
                                         value: wagerAmount,
                                         gasPrice: testGasPrice
                                       }).should.be.fulfilled;
-    await wagersController.takeWager(web3.sha3('wager7'),
+    await wagersController.takeWager(web3.sha3('wager6'),
                                       {
                                         from: accounts[12],
                                         value: wagerAmount,
@@ -368,15 +368,15 @@ contract('Player-Standard', function (accounts) {
     diff2.should.be.above(wagerAmount);
     diff2.should.be.below(wagerAmount+gasAllowance);
     await increaseTimeTo(latestTime() + 2);
-    let voteReady = await events.getVoteReady(web3.sha3("event7"));
+    let voteReady = await events.getVoteReady(web3.sha3("event6"));
     voteReady.should.equal(true);
-    await wagersController.submitVote(web3.sha3('wager7'), 1, { from: accounts[11], gasPrice: testGasPrice }).should.be.fulfilled;
+    await wagersController.submitVote(web3.sha3('wager6'), 1, { from: accounts[11], gasPrice: testGasPrice }).should.be.fulfilled;
     let finished = await mevu.getContractPaused();
     finished.should.equal(false);
     await increaseTimeTo(latestTime() + 1801);
-    await eventsController.finalizeEvent(web3.sha3('event7'));
+    await eventsController.finalizeEvent(web3.sha3('event6'));
     await oraclesController.registerOracle(web3.sha3("event3"), 1, 1, { from: accounts[0] });
-    await wagersController.submitVote(web3.sha3('wager7'), 1, { from: accounts[11], gasPrice: testGasPrice }).should.be.fulfilled;
+    await wagersController.submitVote(web3.sha3('wager6'), 1, { from: accounts[11], gasPrice: testGasPrice }).should.be.fulfilled;
 
 
   });
