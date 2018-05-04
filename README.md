@@ -40,7 +40,7 @@ truffle test
 
 ## Code
 
-![MEVU Contracts](images/ContractChart.jpeg)
+![MEVU Contracts](images/ContractChart.png)
 
 ### Admin Functions
 

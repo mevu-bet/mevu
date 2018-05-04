@@ -146,7 +146,7 @@ contract Events is AuthorityGranter {
             setWinner(eventId, 4); // No clear winner
         }
     }     
-
+    
 
     function removeEventFromActive (bytes32 eventId) internal { 
         uint indexToDelete = standardEvents[eventId].activeEventIndex;

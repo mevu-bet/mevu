@@ -147,25 +147,30 @@ contract WagersController is Ownable {
         } else {
             wagers.setTakerWinVote (wagerId, winnerVote);            
         }
-        uint eventWinner = events.getCurrentWinner(eventId);        
+        uint eventWinner = events.getCurrentWinner(eventId); // Shouldn't matter if bettors agree
+
         // if (eventWinner != 0 && eventWinner < 3) {
         //     lateSettle(wagerId, eventWinner);
         //     lateSettledPayout(wagerId);                          
         // } else {
 
         if (block.timestamp > events.getEndTime(eventId) + admin.getOraclePeriod()) {
-            if (events.getCurrentWinner(eventId) != 0) { 
+            
+            if (eventWinner > 0 && eventWinner < 3) { 
                 lateSettle(wagerId, eventWinner);
                 lateSettledPayout(wagerId);   
 
             } else {
                 abortWager(wagerId);
             }
-        } 
+
+
+
+        }
          else {
-             if (wagers.getTakerWinVote(wagerId) != 0 && wagers.getMakerWinVote(wagerId) != 0) {
+            if (wagers.getTakerWinVote(wagerId) != 0 && wagers.getMakerWinVote(wagerId) != 0) {
                 // if (wagers.getTakerWinVote(wagerId) == wagers.getMakerWinVote(wagerId)) {
-                     settle(wagerId, eventId);
+                settle(wagerId, eventId);
                //  } 
                  //else {
         //             if (events.getThreshold(eventId)) {
@@ -173,8 +178,8 @@ contract WagersController is Ownable {
         //                 lateSettledPayout(wagerId);   
         //             }
         //         }
-             }
-         }
+            }
+        }
 
 
         //     if (events.getCancelled(eventId) || events.getWinner(eventId) > 2) {
@@ -255,7 +260,10 @@ contract WagersController is Ownable {
             wagers.setWinner(wagerId, taker);
             wagers.setLoser(wagerId, maker);     
             Winner(taker);  
-        }  
+        } 
+        if (eventWinner > 2) {
+            abortWager(wagerId);
+        } 
        
     }
 
