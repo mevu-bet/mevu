@@ -1392,7 +1392,7 @@ Returns last event an oracle has orcalized
 ```cs
 function checkOracleStatus (address oracle, bytes32 eventId) external view returns (bool)
 ```
-Rturns the status of an oracle in a given event
+Returns the status of an oracle in a given event
 
 
 
