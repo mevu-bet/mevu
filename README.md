@@ -1198,24 +1198,201 @@ event NewOraclizeQuery (string description)
 ```cs
 function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote) external onlyAuth
 ```
+Adds an oracle and their vote info to the oracleStructs and eventStructs mappings.
 
 
 **removeOracle**
 ```cs
 function removeOracle (address oracle, bytes32 eventId) external onlyAuth
 ```
-Adds an oracle and their vote info to the oracleStructs and eventStructs mappings.
+Removes an oracle from an event
 
 
+**setEventsContract**
+```cs
+function setEventsContract (address thisAddress) external onlyOwner
+```
 
 
+**setCurrentWinner**
+```cs
+function setCurrentWinner (bytes32 eventId) 
+```
+Calculates votes and sets winner of the event 
 
 
+**addToOracleList**
+```cs
+function addToOracleList (address oracle) external onlyAuth 
+```
+Adds an oracle to oracle list
 
 
+**setPaid**
+```cs
+function setPaid (address oracle, bytes32 eventId) external onlyAuth 
+```
+Sets oracle as paid for the event
 
 
+**setLastEventOraclized**
+```cs
+function setLastEventOraclized (address oracle, bytes32 eventId) external onlyAuth
+```
+Sets current event as the last event an oracle has orcalized
 
+
+**setRefunded**
+```cs
+function setRefunded (address oracle, bytes32 eventId) external onlyAuth
+```
+Sets oracle as refunded for the event
+
+
+**setRegistered**
+```cs
+function setRegistered (address oracle, bytes32 eventId) external onlyAuth 
+```
+Registers oracles for a event
+
+
+**getCurrentWinner**
+```cs
+function getCurrentWinner (bytes32 eventId) external view returns (uint) 
+```
+Returns current winner of a given event
+
+
+**getRegistered**
+```cs
+function getRegistered (address oracle, bytes32 eventId) external view returns (bool)
+```
+Returns if oracle is registered for a given event
+
+
+**getWinnerVote**
+```cs
+function getWinnerVote(bytes32 eventId, address oracle) external view returns (uint) 
+```
+Returns the oracles vote on a given event
+
+
+**getPaid**
+```cs
+function getPaid (bytes32 eventId, address oracle) external view returns (bool)
+```
+Returns oracle paid status
+
+
+**getRefunded**
+```cs
+function getRefunded (bytes32 eventId, address oracle) external view returns (bool)
+```
+Returns oracle refund status
+
+
+**getVotesForOne**
+```cs
+function getVotesForOne (bytes32 eventId) external view returns (uint) 
+```
+Returns votes for outcome or team number one from a given event ID
+
+
+**getVotesForTwo**
+```cs
+function getVotesForTwo (bytes32 eventId) external view returns (uint) 
+```
+Returns votes for outcome or team number two from a given event ID
+
+
+**getVotesForThree**
+```cs
+function getVotesForThree (bytes32 eventId) external view returns (uint)
+```
+Returns votes for outcome or team number three from a given event ID
+
+
+**getStakeForOne**
+```cs
+function getStakeForOne (bytes32 eventId) external view returns (uint)
+```
+Returns total MVU staked by oracles for outcome or team number one from a given event ID
+
+
+**getStakeForTwo**
+```cs
+function getStakeForTwo (bytes32 eventId) external view returns (uint)
+```
+Returns total MVU staked by oracles for outcome or team number two from a given event ID
+
+
+**getStakeForThree**
+```cs
+function getStakeForThree (bytes32 eventId) external view returns (uint)
+```
+Returns total MVU staked by oracles for outcome or team number three from a given event ID
+
+
+**getMvuStake**
+```cs
+function getMvuStake (bytes32 eventId, address oracle) external view returns (uint)
+```
+Returns MVU staked in an event for an oracle
+
+
+**getEventOraclesLength**
+```cs
+function getEventOraclesLength (bytes32 eventId) external view returns (uint)
+```
+returns number of oracles in a given event
+
+
+**getOracleVotesNum**
+```cs
+function getOracleVotesNum (bytes32 eventId) external view returns (uint) 
+```
+Returns the number of votes in a given event ID
+
+
+**getTotalOracleStake**
+```cs
+function getTotalOracleStake (bytes32 eventId) external view returns (uint)
+```
+Returns total amount staked by oracles in a given event ID
+
+
+**getThreshold**
+```cs
+function getThreshold (bytes32 eventId) external view returns (bool)
+```
+
+
+**getOracleListLength**
+```cs
+function getOracleListLength() external view returns (uint)
+```
+Returns number of oracles from a given event ID
+
+
+**getOracleListAt**
+```cs
+function getOracleListAt (uint index) external view returns (address)
+```
+Returns list of oracles from a given event ID
+
+
+**getLastEventOraclized**
+```cs
+function getLastEventOraclized (address oracle) external view returns (bytes32)
+```
+Returns last event an oracle has orcalized
+
+
+**checkOracleStatus**
+```cs
+function checkOracleStatus (address oracle, bytes32 eventId) external view returns (bool)
+```
+Rturns the status of an oracle in a given event
 
 
 
