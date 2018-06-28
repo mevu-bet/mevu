@@ -16,7 +16,7 @@ const CancelController = artifacts.require("./build/CancelController.sol");
 module.exports = (deployer, network, accounts) => {    
     let deployAddress = accounts[0];    
     let totalSupply = 500000000000;  
-    let gasLimit = 6900000;
+    let gasLimit = 7500000;
     var admin, mevu, events, eventsController, oracles, oraclesController, oracleVerifier, wagers, wagersController, customWagers, customWagersController, cancelController, rewards, mvuToken;
     
     deployer.deploy(Oracles,  {from: deployAddress, gas:gasLimit});
@@ -26,13 +26,13 @@ module.exports = (deployer, network, accounts) => {
     deployer.deploy(EventsController, {from: deployAddress, gas: gasLimit});
     deployer.deploy(OracleVerifier,  {from: deployAddress, gas:gasLimit});
     deployer.deploy(Wagers,  {from: deployAddress, gas:gasLimit});
-    deployer.deploy(WagersController,  {from: deployAddress, gas:gasLimit});
-    deployer.deploy(CustomWagers,  {from: deployAddress, gas:gasLimit});
-    deployer.deploy(CustomWagersController,  {from: deployAddress, gas:gasLimit});
-    deployer.deploy(CancelController,  {from: deployAddress, gas:gasLimit});
-    deployer.deploy(Rewards, {from: deployAddress, gas:gasLimit});
-    deployer.deploy(Mevu,  {from: deployAddress, gas:gasLimit});
-    deployer.deploy(MvuToken, totalSupply,  {from: deployAddress, gas:gasLimit});
+     deployer.deploy(WagersController,  {from: deployAddress, gas:gasLimit});
+      deployer.deploy(CustomWagers,  {from: deployAddress, gas:gasLimit});
+      deployer.deploy(CustomWagersController,  {from: deployAddress, gas:gasLimit});
+      deployer.deploy(CancelController,  {from: deployAddress, gas:gasLimit});
+      deployer.deploy(Rewards, {from: deployAddress, gas:gasLimit});
+      deployer.deploy(Mevu,  {from: deployAddress, gas:gasLimit});
+      deployer.deploy(MvuToken, totalSupply,  {from: deployAddress, gas:gasLimit});
 
     deployer.then(function() {   
        return Mevu.deployed();
@@ -94,6 +94,8 @@ module.exports = (deployer, network, accounts) => {
     }).then(function(instance){
         wagersController = instance;
         return wagersController.setAdminContract(admin.address);
+    // }).then(function(){
+    //     return wagersController.setOraclesContract(oracles.address);
     }).then(function(){
         return wagersController.setWagersContract(wagers.address);
     }).then(function(){
@@ -105,6 +107,10 @@ module.exports = (deployer, network, accounts) => {
     }).then(function(){
         return wagersController.setRewardsContract(rewards.address);
     }).then(function(){
+        return oracles.setEventsContract(events.address);
+    
+    }).then(function(){
+
         return mevu.setRewardsContract(rewards.address);
     }).then(function(){
         return CancelController.deployed();
@@ -128,9 +134,7 @@ module.exports = (deployer, network, accounts) => {
     }).then(function(){
         return customWagersController.setMevuContract(mevu.address);
     }).then(function(){
-        return customWagersController.setRewardsContract(rewards.address);
-    }).then(function(){
-        return cancelController.setMevuContract(mevu.address);
+        return customWagersController.setRewardsContract(rewards.address); 
     }).then(function(){
         return cancelController.setRewardsContract(rewards.address);
     }).then(function(){
@@ -172,6 +176,8 @@ module.exports = (deployer, network, accounts) => {
     }).then(function(){
         return mevu.grantAuthority(cancelController.address);
     }).then(function(){
+        return events.grantAuthority(oracles.address);
+    }).then(function(){
         return mevu.grantAuthority(events.address);
     }).then(function(){
         return EventsController.deployed();
@@ -180,6 +186,8 @@ module.exports = (deployer, network, accounts) => {
         return events.grantAuthority(eventsController.address);
     }).then(function(){
         return mevu.grantAuthority(eventsController.address);
+    }).then(function(){
+        return admin.grantAuthority(eventsController.address);
     }).then(function(){
         return eventsController.setEventsContract(events.address);         
     }).then(function () {
