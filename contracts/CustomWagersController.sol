@@ -132,7 +132,7 @@ contract CustomWagersController is Ownable {
         rewards.addEth(msg.sender, msg.value);       
         rewards.subUnlockedEth(msg.sender, (value - msg.value));
         address(mevu).transfer(msg.value);
-        WagerMade(id);
+        emit WagerMade(id);
     }
 
     function addJudge (bytes32 wagerId, address judge) onlyMaker(wagerId) notTaken(wagerId) external {
@@ -156,7 +156,7 @@ contract CustomWagersController is Ownable {
         rewards.addEth(msg.sender, msg.value);
         customWagers.setTaker(id, msg.sender);      
         address(mevu).transfer(msg.value);
-        WagerTaken(id);
+        emit WagerTaken(id);
     }
 
 
@@ -221,7 +221,7 @@ contract CustomWagersController is Ownable {
                 }
             }
             payout(wagerId, maker, taker, payoutValue, true);
-            WagerSettled(wagerId);
+            emit WagerSettled(wagerId);
         } else {
             checkJudge(wagerId, maker, taker, makerWinVote, customWagers.getTakerWinVote(wagerId), origValue, payoutValue);
         }     
@@ -257,7 +257,7 @@ contract CustomWagersController is Ownable {
             mevu.addMevuBalance(fee-judgeFee);
             mevu.transferEth(judge, judgeFee);
             payout(wagerId, maker, taker, payoutValue, false);
-            WagerSettled(wagerId);
+            emit WagerSettled(wagerId);
         }           
     }
 
@@ -280,9 +280,10 @@ contract CustomWagersController is Ownable {
             if (judgesVote != 0) {
                 judgeSettle(wagerId, judge, judgesVote, maker, taker, makerWinVote, origValue, payoutValue);
             } else {
-                JudgeNeeded (judge, wagerId);
+                emit JudgeNeeded (judge, wagerId);
             }         
-        } else {
+        } 
+        else {
             abortWager(wagerId);
         }        
     }
@@ -305,8 +306,11 @@ contract CustomWagersController is Ownable {
         //     rewards.subPlayerRep(customWagers.getMaker(wagerId), admin.getPlayerDisagreeRepPenalty());
          //   }
         //}
-        abortWager(wagerId);
-    }  
+        
+        
+         abortWager(wagerId);
+                 
+     }  
 
    
     function payout(bytes32 wagerId, address maker, address taker, uint payoutValue, bool agreed) internal {  

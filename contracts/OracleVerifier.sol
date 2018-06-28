@@ -13,7 +13,7 @@ contract OracleVerifier is AuthorityGranter {
     mapping (address => uint) public timesRemoved;
     bytes32 empty;
 
-    function OracleVerifier() {
+    constructor() {
         mevuAccount = msg.sender;
     }
     
@@ -22,7 +22,7 @@ contract OracleVerifier is AuthorityGranter {
       * @param phoneNumber - ten digit phone number belonging to Oracle which has already been verified.
       */
     function addVerifiedOracle(address newOracle, uint phoneNumber) onlyAuth {
-        bytes32 phoneHash = keccak256(phoneNumber);
+        bytes32 phoneHash = keccak256(toBytes(phoneNumber));
         if (verified[newOracle]) {
             revert();
         } else {
@@ -38,13 +38,21 @@ contract OracleVerifier is AuthorityGranter {
     /** @dev Removes an address as a verified Oracle so the user may no longer register to report event outcomes.
       * @param oracle - address of the oracle to be removed.
       */
-    function removeVerifiedOracle (address oracle) onlyAuth {
+    function removeVerifiedOracle (address oracle) onlyAuth external {
         verified[oracle] = false;
         timesRemoved[oracle] += 1;
     }
     
     function checkVerification (address oracle) external view returns (bool) {
-      return verified[oracle];        
+        return verified[oracle];        
     }
-    
+
+   function toBytes(uint256 x) constant returns (bytes c) {
+        bytes32 b = bytes32(x);
+        c = new bytes(32);
+        for (uint i=0; i < 32; i++) {
+            c[i] = b[i];
+        }
+    }    
+
 }

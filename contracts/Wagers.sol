@@ -8,7 +8,7 @@ contract Wagers is AuthorityGranter {
         uint origValue;
         uint winningValue;        
         uint makerChoice;
-        uint takerChoice;
+      
         uint odds;
         uint makerWinnerVote;
         uint takerWinnerVote;
@@ -19,7 +19,9 @@ contract Wagers is AuthorityGranter {
         bool makerCancelRequest;
         bool takerCancelRequest;
         bool locked;
-        bool settled;        
+        bool settled; 
+        bool takerVoted;       
+        bool makerVoted;
     }
  
     mapping (bytes32 => Wager) wagersMap;
@@ -31,7 +33,7 @@ contract Wagers is AuthorityGranter {
         uint origValue,
         uint winningValue,        
         uint makerChoice,
-        uint takerChoice,
+       
         uint odds,
         uint makerWinnerVote,
         uint takerWinnerVote,
@@ -44,7 +46,7 @@ contract Wagers is AuthorityGranter {
                                         origValue,
                                         winningValue,
                                         makerChoice,
-                                        takerChoice,
+                                      
                                         odds,
                                         makerWinnerVote,
                                         takerWinnerVote,
@@ -52,6 +54,8 @@ contract Wagers is AuthorityGranter {
                                         address(0),
                                         address(0),
                                         address(0),
+                                        false,
+                                        false,
                                         false,
                                         false,
                                         false,
@@ -63,9 +67,15 @@ contract Wagers is AuthorityGranter {
 
     function setSettled (bytes32 wagerId) external onlyAuth { wagersMap[wagerId].settled = true; }
 
-    function setMakerWinVote (bytes32 id, uint winnerVote) external onlyAuth { wagersMap[id].makerWinnerVote = winnerVote; }
+    function setMakerWinVote (bytes32 id, uint winnerVote) external onlyAuth { 
+        wagersMap[id].makerWinnerVote = winnerVote;
+        wagersMap[id].makerVoted = true; 
+    }
 
-    function setTakerWinVote (bytes32 id, uint winnerVote) external onlyAuth { wagersMap[id].takerWinnerVote = winnerVote; }
+    function setTakerWinVote (bytes32 id, uint winnerVote) external onlyAuth { 
+        wagersMap[id].takerWinnerVote = winnerVote;
+        wagersMap[id].takerVoted = true;
+    }
 
     function setRefund (address bettor, bytes32 wagerId) external onlyAuth { recdRefund[bettor][wagerId] = true; }
 
@@ -93,7 +103,7 @@ contract Wagers is AuthorityGranter {
 
     function getMakerChoice (bytes32 id) external view returns (uint) { return wagersMap[id].makerChoice; }
 
-    function getTakerChoice (bytes32 id) external view returns (uint) { return wagersMap[id].takerChoice; }
+    // function getTakerChoice (bytes32 id) external view returns (uint) { return wagersMap[id].takerChoice; }
 
     function getMakerCancelRequest (bytes32 id) external view returns (bool) { return wagersMap[id].makerCancelRequest; }
 
@@ -114,4 +124,8 @@ contract Wagers is AuthorityGranter {
     function getWinner (bytes32 id) external view returns (address) { return wagersMap[id].winner; }
 
     function getLoser (bytes32 id) external view returns (address) { return wagersMap[id].loser; }
+    
+    function getMakerWinVoted (bytes32 id) external view returns (bool) { return wagersMap[id].makerVoted; }
+
+    function getTakerWinVoted (bytes32 id) external view returns (bool) { return wagersMap[id].takerVoted; }
 }

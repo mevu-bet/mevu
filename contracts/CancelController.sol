@@ -176,7 +176,10 @@ contract CancelController is Ownable {
         if (taker != address(0)) {         
             rewards.addUnlockedEth(wagers.getTaker(wagerId), (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
         }             
-    }    
-   
+    }  
+
+    
+
+ 
 
 }

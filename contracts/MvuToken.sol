@@ -14,9 +14,9 @@ contract MvuToken is MintableToken {
 
     event TokensMade(address indexed to, uint amount);   
 
-    function MvuToken (uint initFounderSupply) {   
+    constructor (uint initFounderSupply) {   
         balances[msg.sender] = initFounderSupply;
-        TokensMade(msg.sender, initFounderSupply);      
+        emit TokensMade(msg.sender, initFounderSupply);      
         totalSupply_ += initFounderSupply;        
     }     
 

@@ -99,12 +99,13 @@ contract OraclesController is Ownable {
     ) 
         eventUnlocked(eventId) 
         onlyVerified          
-        mustBeVoteReady(eventId)       
+        mustBeVoteReady(eventId)    
+        external   
     {
         //require (keccak256(strConcat(addrToString(msg.sender),  bytes32ToString(eventId))) == oracleId);
         require (!oracles.getRegistered(msg.sender, eventId));       
         require(mvuStake >= admin.getMinOracleStake());
-        require(winnerVote == 1 || winnerVote == 2 || winnerVote == 3);            
+        //require(winnerVote == 1 || winnerVote == 2 || winnerVote == 3);            
         oracles.setRegistered(msg.sender, eventId);
         bytes32 empty;
         if (oracles.getLastEventOraclized(msg.sender) == empty) {
@@ -115,7 +116,7 @@ contract OraclesController is Ownable {
         mvuToken.transferFrom(msg.sender, address(this), mvuStake);       
         oracles.addOracle (msg.sender, eventId, mvuStake, winnerVote, admin.getMinOracleNum(eventId));                  
         rewards.addMvu(msg.sender, mvuStake);     
-        OracleRegistered(msg.sender, eventId);     
+        emit OracleRegistered(msg.sender, eventId);     
                          
     }
 
@@ -131,15 +132,18 @@ contract OraclesController is Ownable {
         uint mvuReward;
         uint mvuRewardPool;
         
-        if (events.getWinner(eventId) == 1) {
-            mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForOne(eventId); 
-        } 
-        if (events.getWinner(eventId) == 2) {
-            mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForTwo(eventId); 
-        }         
-        if (events.getWinner(eventId) == 3) {
-            mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForThree(eventId); 
-        }  
+        // if (events.getWinner(eventId) == 1) {
+        //     mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForOne(eventId); 
+        // } 
+        // if (events.getWinner(eventId) == 2) {
+        //     mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForTwo(eventId); 
+        // }         
+        // if (events.getWinner(eventId) == 3) {
+        //     mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForThree(eventId); 
+        // }  
+        uint winner = events.getWinner(eventId);
+
+        mvuRewardPool = oracles.getTotalOracleStake(eventId) - oracles.getStakeForOutcome(eventId, winner); 
 
         uint twoPercentRewardPool = 2 * events.getTotalAmountResolvedWithoutOracles(eventId);
         twoPercentRewardPool /= 100;
@@ -160,13 +164,13 @@ contract OraclesController is Ownable {
             mvuReward += oracles.getMvuStake(eventId, msg.sender);
             rewards.addUnlockedMvu(msg.sender, mvuReward);
             rewards.addOracleRep(msg.sender, admin.getOracleRepReward());       
-            WithConsensus(msg.sender);      
+            emit WithConsensus(msg.sender);      
         } else {
             mvuReward = oracles.getMvuStake(eventId, msg.sender)/2;
             rewards.subMvu(msg.sender, mvuReward);
             rewards.addUnlockedMvu(msg.sender, mvuReward);
             rewards.subOracleRep(msg.sender, admin.getOracleRepPenalty());
-            AgainstConsensus(msg.sender);
+            emit AgainstConsensus(msg.sender);
         }
     }
 

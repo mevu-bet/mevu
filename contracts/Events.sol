@@ -12,8 +12,8 @@ contract Events is AuthorityGranter {
     event EventVoteReady(bytes32 eventId);
 
     struct StandardWagerEvent {         
-        bytes32 teamOne;
-        bytes32 teamTwo;
+        bytes32[] teams;
+        bool drawPossible;
         uint startTime; // Unix timestamp
         uint duration; // Seconds
         uint numWagers;
@@ -21,10 +21,11 @@ contract Events is AuthorityGranter {
         uint totalAmountResolvedWithoutOracles;
         uint currentWinner;
         uint winner;
-        uint makerBond;       
-        uint activeEventIndex;
+        uint makerBond;           
+        uint activeEventIndex;        
         address maker;
-        bytes32[] wagers;        
+        bytes32[] wagers;  
+      
         bool cancelled;
         bool threshold;
       
@@ -54,38 +55,38 @@ contract Events is AuthorityGranter {
    
       * @param startTime The timestamp of when the event starts
       * @param duration The length of the event in seconds.     
-      * @param teamOne The name of one of the participants, eg. Toronto Maple Leafs, Georges St-Pierre, Justin Trudeau.
-      * @param teamTwo The name of teamOne's opposition.     
+   
       */
     function makeStandardEvent(
         bytes32 id,        
         uint startTime,
         uint duration,
-        bytes32 teamOne,
-        bytes32 teamTwo,
+        bytes32[] teams,
+        bool drawPossible,
         uint bondValue,
         address maker
+     
     )
         external
         onlyAuth            
     {        
         StandardWagerEvent memory thisEvent;   
         thisEvent = StandardWagerEvent(                                        
-                                        teamOne,
-                                        teamTwo,
-                                        startTime,
-                                        duration,
-                                        0,
-                                        0,                                    
-                                        0,
-                                        0,
-                                        0,
-                                        bondValue,                                                                                                              
-                                        activeEvents.length,
-                                        maker,  
-                                        emptyBytes32Array,                                                                                                    
-                                        false,
-                                        false);
+            teams,
+            drawPossible,
+            startTime,
+            duration,
+            0,
+            0,                                    
+            0,
+            0,
+            0,
+            bondValue,                                                                                                              
+            activeEvents.length,
+            maker,  
+            emptyBytes32Array,                                                                                                            
+            false,
+            false);
         standardEvents[id] = thisEvent;
         eventsCount++;
         activeEvents.push(id);
@@ -146,7 +147,7 @@ contract Events is AuthorityGranter {
             setWinner(eventId, 4); // No clear winner
         }
     }     
-    
+
 
     function removeEventFromActive (bytes32 eventId) internal { 
         uint indexToDelete = standardEvents[eventId].activeEventIndex;
@@ -201,9 +202,17 @@ contract Events is AuthorityGranter {
 
     function getMakerBond (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].makerBond; }
 
-    function getTeamOne (bytes32 eventId) external view returns (bytes32) { return standardEvents[eventId].teamOne; }
+    function getNumOutcomes (bytes32 eventId) external view returns (uint) {
+        if (standardEvents[eventId].drawPossible) {
+            return standardEvents[eventId].teams.length + 1;
+        } else {
+            return standardEvents[eventId].teams.length;
+        }
+    }
 
-    function getTeamTwo (bytes32 eventId) external view returns (bytes32) { return standardEvents[eventId].teamTwo; }
+    function getTeams (bytes32 eventId) external view returns (bytes32[]) { return standardEvents[eventId].teams; }
+
+    function getDrawPossible (bytes32 eventId) external view returns (bool) { return standardEvents[eventId].drawPossible; }
 
     function getThreshold (bytes32 eventId) external view returns (bool) { return standardEvents[eventId].threshold; }
 

@@ -2,7 +2,7 @@
 
 pragma solidity ^0.4.18; 
 import "./AuthorityGranter.sol";
-import "../ethereum-api/usingOraclize.sol";
+//import "../ethereum-api/usingOraclize.sol";
 import "./Events.sol";
 import "./Admin.sol";
 import "./Wagers.sol";
@@ -11,7 +11,7 @@ import "./Oracles.sol";
 //import "./MvuToken.sol";
 import "../zeppelin-solidity/contracts/token/ERC20/MintableToken.sol";
 
-contract Mevu is AuthorityGranter, usingOraclize {
+contract Mevu is AuthorityGranter {
 
     address private mevuWallet;
     Events private events;
@@ -38,6 +38,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
    
     
     event NewOraclizeQuery (string description);  
+      event Aborted (bytes32 wagerId);
 
     modifier notPaused() {
         require (!contractPaused);
@@ -57,7 +58,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
 
  
     // Constructor 
-    function Mevu () payable { 
+    constructor () payable { 
         //OAR = OraclizeAddrResolverI(0x6f485c8bf6fc43ea212e93bbf8ce046c7f1cb475);                
         mevuWallet = msg.sender;
         newMonth = block.timestamp + monthSeconds;       
@@ -79,42 +80,42 @@ contract Mevu is AuthorityGranter, usingOraclize {
  
     function setMvuTokenContract (address thisAddr) external onlyOwner { mvuToken = MintableToken(thisAddr); } 
   
-    function __callback (bytes32 myid, string result)  notPaused {        
-         require(validIds[myid]);
-         require(msg.sender == oraclize_cbAddress());      
+    // function __callback (bytes32 myid, string result)  notPaused {        
+    //      require(validIds[myid]);
+    //      require(msg.sender == oraclize_cbAddress());      
        
         
-        if (randomNumRequired) {        
-             uint maxRange = 2**(8* 7); // this is the highest uint we want to get. It should never be greater than 2^(8*N), where N is the number of random bytes we had asked the datasource to return
-             uint randomNumber = uint(keccak256(result)) % maxRange; // this is an efficient way to get the uint out in the [0, maxRange] range
-             randomNumRequired = false;   
-             address potentialWinner = oracles.getOracleListAt(randomNumber);
-             payoutLottery(potentialWinner);
-        } 
-        checkLottery();
+    //     if (randomNumRequired) {        
+    //          uint maxRange = 2**(8* 7); // this is the highest uint we want to get. It should never be greater than 2^(8*N), where N is the number of random bytes we had asked the datasource to return
+    //          uint randomNumber = uint(keccak256(result)) % maxRange; // this is an efficient way to get the uint out in the [0, maxRange] range
+    //          randomNumRequired = false;   
+    //          address potentialWinner = oracles.getOracleListAt(randomNumber);
+    //          payoutLottery(potentialWinner);
+    //     } 
+    //     checkLottery();
 
         
         
-        //else {             
-        //     bytes32 queryId;  
-        //     if (lastIteratedIndex == -1) {               
-        //        //events.determineEventStage(events.getActiveEventId(lastIteratedIndex), lastIteratedIndex);
-        //         lastIteratedIndex = int(events.getActiveEventsLength()-1);
+    //     //else {             
+    //     //     bytes32 queryId;  
+    //     //     if (lastIteratedIndex == -1) {               
+    //     //        //events.determineEventStage(events.getActiveEventId(lastIteratedIndex), lastIteratedIndex);
+    //     //         lastIteratedIndex = int(events.getActiveEventsLength()-1);
                 
-        //         //checkLottery();
-        //         NewOraclizeQuery("Last active event processed, callback being set for admin interval.");
-        //         queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "", admin.getCallbackGasLimit());
-        //         validIds[queryId] = true; 
-        //     } else {
-        //         events.determineEventStage(events.getActiveEventId(uint(lastIteratedIndex)), uint(lastIteratedIndex));               
+    //     //         //checkLottery();
+    //     //         NewOraclizeQuery("Last active event processed, callback being set for admin interval.");
+    //     //         queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "", admin.getCallbackGasLimit());
+    //     //         validIds[queryId] = true; 
+    //     //     } else {
+    //     //         events.determineEventStage(events.getActiveEventId(uint(lastIteratedIndex)), uint(lastIteratedIndex));               
                
-        //         lastIteratedIndex --;
-        //         NewOraclizeQuery("Not done yet, querying right away again."); 
-        //         queryId = oraclize_query("URL", "", admin.getCallbackGasLimit());
-        //         validIds[queryId] = true;        
-        //     }            
-        // } 
-    }    
+    //     //         lastIteratedIndex --;
+    //     //         NewOraclizeQuery("Not done yet, querying right away again."); 
+    //     //         queryId = oraclize_query("URL", "", admin.getCallbackGasLimit());
+    //     //         validIds[queryId] = true;        
+    //     //     }            
+    //     // } 
+    // }    
 
     function setMevuWallet (address newAddress) external onlyOwner {
         mevuWallet = newAddress;       
@@ -135,48 +136,48 @@ contract Mevu is AuthorityGranter, usingOraclize {
     } 
 
 
-    /** @dev Calls the oraclize contract for a random number generated through the Wolfram Alpha engine
-      * @param max uint which corresponds to entries in oracleList array.
-      */ 
-    function randomNum(uint max) private {
-        randomNumRequired = true;
-        string memory qString = strConcat("random number between 0 and ", bytes32ToString(uintToBytes(max)));        
-        bytes32 queryId = oraclize_query("Wolfram Alpha", qString);
-        validIds[queryId] = true;
-    }       
+    // /** @dev Calls the oraclize contract for a random number generated through the Wolfram Alpha engine
+    //   * @param max uint which corresponds to entries in oracleList array.
+    //   */ 
+    // function randomNum(uint max) private {
+    //     randomNumRequired = true;
+    //     string memory qString = strConcat("random number between 0 and ", bytes32ToString(uintToBytes(max)));        
+    //     bytes32 queryId = oraclize_query("Wolfram Alpha", qString);
+    //     validIds[queryId] = true;
+    // }       
     
     // function callRandomNum (uint max) internal {
     //     randomNum(max);
     // }
 
-    /** @dev Checks to see if a month (in seconds) has passed since the last lottery paid out, pays out if so    
-      */ 
-    function checkLottery() internal {       
-        if (block.timestamp > newMonth) {
-            addMonth();
-            randomNum(oracles.getOracleListLength()-1);
-        }
-    }
+    // /** @dev Checks to see if a month (in seconds) has passed since the last lottery paid out, pays out if so    
+    //   */ 
+    // function checkLottery() internal {       
+    //     if (block.timestamp > newMonth) {
+    //         addMonth();
+    //         randomNum(oracles.getOracleListLength()-1);
+    //     }
+    // }
 
-    /** @dev Pays out the monthly lottery balance to a random oracle.   
-      */ 
-    function payoutLottery(address potentialWinner) internal { 
+    // /** @dev Pays out the monthly lottery balance to a random oracle.   
+    //   */ 
+    // function payoutLottery(address potentialWinner) internal { 
     
-        if (allowedToWin(potentialWinner)) {           
-            uint thisWin = lotteryBalance;
-            lotteryBalance = 0;                
-            potentialWinner.transfer(thisWin);
-            randomNumRequired = true;
-            NewOraclizeQuery("Winner paid, calling after another month");
-            bytes32 queryId = oraclize_query(newMonth - block.timestamp, "URL", "", admin.getCallbackGasLimit());
-            validIds[queryId] = true;  
+    //     if (allowedToWin(potentialWinner)) {           
+    //         uint thisWin = lotteryBalance;
+    //         lotteryBalance = 0;                
+    //         potentialWinner.transfer(thisWin);
+    //         randomNumRequired = true;
+    //         NewOraclizeQuery("Winner paid, calling after another month");
+    //         bytes32 queryId = oraclize_query(newMonth - block.timestamp, "URL", "", admin.getCallbackGasLimit());
+    //         validIds[queryId] = true;  
 
-        } else {
-            require(oracles.getOracleListLength() > 0);
-            randomNum(oracles.getOracleListLength()-1);            
-        }       
+    //     } else {
+    //         require(oracles.getOracleListLength() > 0);
+    //         randomNum(oracles.getOracleListLength()-1);            
+    //     }       
         
-    }
+    // }
 
     // PLayers should call this when an event has been cancelled after thay have made a wager
     function playerRefund (bytes32 wagerId) external  onlyBettor(wagerId) {
@@ -210,17 +211,17 @@ contract Mevu is AuthorityGranter, usingOraclize {
         contractPaused = true;    
     }
 
-    function restartContract(uint secondsFromNow) 
-        external 
-        onlyOwner
-        payable
-    {            
-        contractPaused = false;
-        //lastIteratedIndex = int(events.getActiveEventsLength()-1);
-        NewOraclizeQuery("Starting contract!");
-        bytes32 queryId = oraclize_query(secondsFromNow, "URL", "", admin.getCallbackGasLimit());
-        validIds[queryId] = true;          
-    }
+    // function restartContract(uint secondsFromNow) 
+    //     external 
+    //     onlyOwner
+    //     payable
+    // {            
+    //     contractPaused = false;
+    //     //lastIteratedIndex = int(events.getActiveEventsLength()-1);
+    //     NewOraclizeQuery("Starting contract!");
+    //     bytes32 queryId = oraclize_query(secondsFromNow, "URL", "", admin.getCallbackGasLimit());
+    //     validIds[queryId] = true;          
+    // }
 
     function mevuWithdraw (uint amount) external onlyOwner {
         require(mevuBalance >= amount);
@@ -291,5 +292,24 @@ contract Mevu is AuthorityGranter, usingOraclize {
         }
         return string(bytesString);
     } 
+
+        /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
+     *  been cancelled, refunds all eth.               
+     *  @param wagerId bytes32 wagerId of the wager to abort.  
+     */ 
+    function abortWager(bytes32 wagerId) onlyBettor(wagerId) external {
+
+        require (events.getCancelled(wagers.getEventId(wagerId)));
+
+        address maker = wagers.getMaker(wagerId);
+        address taker = wagers.getTaker(wagerId);
+        wagers.setSettled(wagerId);
+        rewards.addUnlockedEth(maker, wagers.getOrigValue(wagerId));    
+      
+        if (taker != address(0)) {         
+            rewards.addUnlockedEth(taker, (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));       
+        }   
+        emit Aborted(wagerId);          
+    }  
     
 } 

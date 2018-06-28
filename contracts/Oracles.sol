@@ -17,12 +17,14 @@ contract Oracles is AuthorityGranter {
     struct EventStruct {
         uint oracleVotes;
         uint totalOracleStake;   
-        uint votesForOne;
-        uint votesForTwo;
-        uint votesForThree;
-        uint stakeForOne;
-        uint stakeForTwo;
-        uint stakeForThree;
+        // uint votesForOne;
+        // uint votesForTwo;
+        // uint votesForThree;
+        uint[] votes;
+        // uint stakeForOne;
+        // uint stakeForTwo;
+        // uint stakeForThree;
+        uint[] stakes;
         uint currentWinner;
         mapping (address => uint) oracleStakes;
         address[] oracles;  
@@ -55,25 +57,48 @@ contract Oracles is AuthorityGranter {
     }
 
     function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote, uint minOracleNum) external onlyAuth {
+        uint[] memory newVotes = eventStructs[eventId].votes;
+        uint[] memory newStakes = eventStructs[eventId].stakes;
+        uint numOutcomes = events.getNumOutcomes(eventId);
+        if (newVotes.length == 0) {
+            newVotes = new uint[](numOutcomes); 
+            newStakes = new uint[](numOutcomes);   
+            for (uint i = 0; i < numOutcomes; i++){
+                if (i == winnerVote) {
+                    newVotes[i] = 1;
+                    newStakes[i] = mvuStake;
+                } else {
+                    newVotes[i] = 0;
+                    newStakes[i] = 0;
+                }
+            }                    
+        } else {
+            newVotes[winnerVote] = newVotes[winnerVote] + 1;
+            newStakes[winnerVote] =  newStakes[winnerVote] + mvuStake;
+        }
+
         OracleStruct memory thisOracle; 
         thisOracle = OracleStruct (eventId, mvuStake, winnerVote, false);      
         oracleStructs[oracle][eventId] = thisOracle;
-        if (winnerVote == 1) {
-            eventStructs[eventId].votesForOne ++;
-            eventStructs[eventId].stakeForOne += mvuStake; 
-        }
-        if (winnerVote == 2) {
-            eventStructs[eventId].votesForTwo ++;
-            eventStructs[eventId].stakeForTwo += mvuStake; 
-        }
-        if (winnerVote == 3) {
-            eventStructs[eventId].votesForThree ++;
-            eventStructs[eventId].stakeForThree += mvuStake; 
-        }
+        // if (winnerVote == 1) {
+        //     eventStructs[eventId].votesForOne ++;
+        //     eventStructs[eventId].stakeForOne += mvuStake; 
+        // }
+        // if (winnerVote == 2) {
+        //     eventStructs[eventId].votesForTwo ++;
+        //     eventStructs[eventId].stakeForTwo += mvuStake; 
+        // }
+        // if (winnerVote == 3) {
+        //     eventStructs[eventId].votesForThree ++;
+        //     eventStructs[eventId].stakeForThree += mvuStake; 
+        // }
+        eventStructs[eventId].votes = newVotes;
+        eventStructs[eventId].stakes = newStakes;
+
         eventStructs[eventId].oracleStakes[oracle] = mvuStake;
         eventStructs[eventId].totalOracleStake += mvuStake;
         eventStructs[eventId].oracleVotes += 1;
-        setCurrentWinner(eventId); 
+        setCurrentWinner(eventId, winnerVote); 
 
         if (eventStructs[eventId].oracleVotes == minOracleNum) {
             eventStructs[eventId].threshold = true;
@@ -81,23 +106,32 @@ contract Oracles is AuthorityGranter {
         }    
     } 
 
-    function setCurrentWinner (bytes32 eventId) {
-        if  (eventStructs[eventId].votesForOne == eventStructs[eventId].votesForTwo) {
-            eventStructs[eventId].currentWinner = 3;
-            events.setCurrentWinner(eventId, 3);
+    function setCurrentWinner (bytes32 eventId, uint outcomeJustVotedFor) internal {
+        uint currentWinner = eventStructs[eventId].currentWinner;
+        // if  (eventStructs[eventId].votesForOne == eventStructs[eventId].votesForTwo) {
+        //     eventStructs[eventId].currentWinner = 3;
+        //     events.setCurrentWinner(eventId, 3);
+        // }
+        // if  (eventStructs[eventId].votesForOne > eventStructs[eventId].votesForTwo) {
+        //     eventStructs[eventId].currentWinner = 1;
+        //     events.setCurrentWinner(eventId, 1);
+        // }
+        // if  (eventStructs[eventId].votesForTwo > eventStructs[eventId].votesForOne) {
+        //     eventStructs[eventId].currentWinner = 2;
+        //     events.setCurrentWinner(eventId, 2);
+        // }
+        // if  (eventStructs[eventId].votesForThree > eventStructs[eventId].votesForOne  &&  eventStructs[eventId].votesForThree > eventStructs[eventId].votesForTwo) {
+        //     eventStructs[eventId].currentWinner = 3;
+        //     events.setCurrentWinner(eventId, 3);
+        // }
+        if (currentWinner != outcomeJustVotedFor) {
+            if (eventStructs[eventId].votes[outcomeJustVotedFor] > eventStructs[eventId].votes[currentWinner]){
+                eventStructs[eventId].currentWinner = outcomeJustVotedFor;
+                events.setCurrentWinner(eventId, outcomeJustVotedFor);
+            }
         }
-        if  (eventStructs[eventId].votesForOne > eventStructs[eventId].votesForTwo) {
-            eventStructs[eventId].currentWinner = 1;
-            events.setCurrentWinner(eventId, 1);
-        }
-        if  (eventStructs[eventId].votesForTwo > eventStructs[eventId].votesForOne) {
-            eventStructs[eventId].currentWinner = 2;
-            events.setCurrentWinner(eventId, 2);
-        }
-        if  (eventStructs[eventId].votesForThree > eventStructs[eventId].votesForOne  &&  eventStructs[eventId].votesForThree > eventStructs[eventId].votesForTwo) {
-            eventStructs[eventId].currentWinner = 3;
-            events.setCurrentWinner(eventId, 3);
-        }
+
+
     } 
 
 
@@ -121,17 +155,21 @@ contract Oracles is AuthorityGranter {
 
     function getRefunded (bytes32 eventId, address oracle) external view returns (bool) { return refundClaimed[oracle][eventId]; }
 
-    function getVotesForOne (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].votesForOne; }
+    // function getVotesForOne (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].votesForOne; }
 
-    function getVotesForTwo (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].votesForTwo; }    
+    // function getVotesForTwo (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].votesForTwo; }    
 
-    function getVotesForThree (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].votesForThree; } 
+    // function getVotesForThree (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].votesForThree; } 
 
-    function getStakeForOne (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].stakeForOne; }
+    function getVotesForOutcome (bytes32 eventId, uint outcome) external view returns (uint) { return eventStructs[eventId].votes[outcome]; }
 
-    function getStakeForTwo (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].stakeForTwo; } 
+    // function getStakeForOne (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].stakeForOne; }
 
-    function getStakeForThree (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].stakeForThree; }  
+    // function getStakeForTwo (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].stakeForTwo; } 
+
+    // function getStakeForThree (bytes32 eventId) external view returns (uint) { return eventStructs[eventId].stakeForThree; }  
+
+    function getStakeForOutcome (bytes32 eventId, uint outcome) external view returns (uint) { return eventStructs[eventId].stakes[outcome]; }
 
     function getMvuStake (bytes32 eventId, address oracle) external view returns (uint) { return oracleStructs[oracle][eventId].mvuStake; }
    
