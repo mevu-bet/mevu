@@ -44,14 +44,14 @@ contract Admin is AuthorityGranter {
 
     function setCallbackGasLimit (uint newLimit) external onlyAuth { callbackGasLimit = newLimit; }    
     
-    /** @dev Sets a new number for the interval in between callback functions.
-      * @param newInterval The new interval between oraclize callbacks.        
-      */
+  /** @dev Sets a new number for the interval in between callback functions.
+    * @param newInterval The new interval between oraclize callbacks.        
+    */
     function setCallbackInterval(uint newInterval) external onlyAuth { callbackInterval = newInterval; }
 
-    /** @dev Updates the minimum amount of ETH required to make a wager.
-      * @param minWager The new required minimum amount of ETH to make a wager.
-      */
+  /** @dev Updates the minimum amount of ETH required to make a wager.
+    * @param minWager The new required minimum amount of ETH to make a wager.
+    */
     function setMinWagerAmount(uint256 minWager) external onlyAuth { minWagerAmount = minWager; }
 
     function getAbandonPeriod() external view returns (uint) { return abandonPeriod; } 

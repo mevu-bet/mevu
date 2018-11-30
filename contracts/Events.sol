@@ -10,6 +10,7 @@ contract Events is AuthorityGranter {
     Mevu private mevu;
 
     event EventVoteReady(bytes32 eventId);
+    event EventCancelled(bytes32 eventId);
 
     struct StandardWagerEvent {         
         bytes32[] teams;
@@ -169,6 +170,12 @@ contract Events is AuthorityGranter {
     }
 
     function setCurrentWinner(bytes32 eventId, uint newWinner) external onlyAuth { standardEvents[eventId].currentWinner = newWinner; }
+
+    function setCancelled(bytes32 eventId) external onlyAuth { 
+        standardEvents[eventId].cancelled = true;
+        removeEventFromActive(eventId);
+        emit EventCancelled(eventId);
+    }
 
     function setWinner (bytes32 eventId, uint winner) public onlyAuth { standardEvents[eventId].winner = winner; }
 

@@ -48,6 +48,11 @@ contract WagersController is Ownable {
         _;
     }
 
+    modifier notCancelled(bytes32 eventId) {
+        require(!events.getCancelled(eventId));
+        _;
+    }
+
     modifier onlyBettor (bytes32 wagerId) {
         require (msg.sender == wagers.getMaker(wagerId) || msg.sender == wagers.getTaker(wagerId));        
         _;
@@ -140,7 +145,8 @@ contract WagersController is Ownable {
         bytes32 wagerId,
         uint winnerVote
     ) 
-        onlyBettor(wagerId) 
+        onlyBettor(wagerId)
+        notCancelled(wagers.getEventId(wagerId)) 
         notPaused
         external 
     {
@@ -314,15 +320,18 @@ contract WagersController is Ownable {
         address maker = wagers.getMaker(wagerId);
         address taker = wagers.getTaker(wagerId);                    
         if (wagers.getWinner(wagerId) == maker) { // Maker won
-            rewards.addUnlockedEth(maker, payoutValue);
+            //rewards.addUnlockedEth(maker, payoutValue);
             rewards.subEth(maker, origValue);
-            rewards.addEth(maker, payoutValue);
+            mevu.transferEth(maker, payoutValue);    
+
+            //rewards.addEth(maker, payoutValue);
             rewards.addPlayerRep(maker, 1);
             rewards.subPlayerRep(taker, 2);
         } else { //Taker won
-            rewards.addUnlockedEth(taker, payoutValue);
+            //rewards.addUnlockedEth(taker, payoutValue);
             rewards.subEth(taker, winningValue - origValue);
-            rewards.addEth(taker, payoutValue);
+            //rewards.addEth(taker, payoutValue);
+            mevu.transferEth(taker, payoutValue);    
             rewards.addPlayerRep(taker, 1);
             rewards.subPlayerRep(maker, 2);
         }
@@ -340,7 +349,13 @@ contract WagersController is Ownable {
     //     rewards.subEth(msg.sender, eth);
     //     //playerFunds -= eth;
     //     mevu.transferEth(msg.sender, eth);         
-    // }        
+    // }    
+
+    function cancelRefund(bytes32 wagerId) external {
+        require(events.getCancelled(wagers.getEventId(wagerId)));
+        require (!wagers.getSettled(wagerId));
+        abortWager(wagerId);
+    }    
 
     /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
      *  been cancelled, refunds all eth.               

@@ -45,9 +45,7 @@ contract Oracles is AuthorityGranter {
 
     function setEventsContract (address thisAddress) external onlyOwner {
         events = Events(thisAddress);
-    }
-
-    
+    }    
 
     function removeOracle (address oracle, bytes32 eventId) external onlyAuth {
         OracleStruct memory thisOracle;

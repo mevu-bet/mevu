@@ -35,7 +35,10 @@ contract EventsController is Ownable {
         _;
     }
 
-
+    modifier notCancelled(bytes32 eventId) {
+        require (!events.getCancelled(eventId));
+        _;
+    }
     
     modifier onlyVerified() {
         require (oracleVerif.checkVerification(msg.sender));
@@ -73,7 +76,10 @@ contract EventsController is Ownable {
         admin.setMinOracleNum(id,1);
     }
 
-   
+    function cancelEvent (bytes32 eventId) notCancelled(eventId) onlyVerified external {
+        events.setCancelled(eventId);
+        mevu.transferEth(events.getMaker(eventId), events.getMakerBond(eventId));
+    }   
 
     // Called by event creator to finalize bet and remove from active array, if not called within win claim period then anyone can call and steal creators bond money
     function finalizeEvent (bytes32 eventId) oraclePeriodOver(eventId) isActive(eventId) external {

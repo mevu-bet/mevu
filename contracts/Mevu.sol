@@ -1,8 +1,6 @@
-
-
-pragma solidity ^0.4.18; 
+pragma solidity ^0.4.18;
 import "./AuthorityGranter.sol";
-//import "../ethereum-api/usingOraclize.sol";
+import "../ethereum-api/oraclizeAPI.sol";
 import "./Events.sol";
 import "./Admin.sol";
 import "./Wagers.sol";
@@ -11,62 +9,69 @@ import "./Oracles.sol";
 //import "./MvuToken.sol";
 import "../zeppelin-solidity/contracts/token/ERC20/MintableToken.sol";
 
-contract Mevu is AuthorityGranter {
+contract Mevu is AuthorityGranter, usingOraclize {
 
     address private mevuWallet;
     Events private events;
     Admin private admin;
     Oracles private oracles;
-    Rewards private rewards;   
+    Rewards private rewards;
     MintableToken private mvuToken;
     Wagers private wagers;
-    
+
     bool public contractPaused = false;
-    bool private randomNumRequired = false;  
-    int private lastIteratedIndex = -1;  
+    bool private randomNumRequired = false;
+    int private lastIteratedIndex = -1;
     uint public mevuBalance = 0;
-    uint public lotteryBalance = 0;    
-   
+    uint public lotteryBalance = 0;
+
     uint private oracleServiceFee = 3; //Percent
-    
-    uint public newMonth;
+
+    uint public nextMonth;
+    uint public lastMonth;
     uint private monthSeconds = 2592000;
-    uint public playerFunds;  
-       
+    uint public playerFunds;
+
     mapping (bytes32 => bool) private validIds;
     mapping (address => bool) private abandoned;
-   
-    
-    event NewOraclizeQuery (string description);  
-      event Aborted (bytes32 wagerId);
+
+    mapping (address => uint) private lastLotteryEntryTimes;
+    address[] private lotteryEntrants;
+
+
+    event NewOraclizeQuery (string description);
+    event OraclizeQueryResponse (string result);
+    event LotteryPotIncreased(uint addedAmount);
+    event ReceivedRandomNumber(uint number);
+    event OracleEnteredLottery(address entrant);
+    event Aborted (bytes32 wagerId);
 
     modifier notPaused() {
         require (!contractPaused);
         _;
-    }    
+    }
 
     modifier onlyPaused() {
         require (contractPaused);
         _;
     }
 
-     modifier onlyBettor (bytes32 wagerId) {
+    modifier onlyBettor (bytes32 wagerId) {
         require (msg.sender == wagers.getMaker(wagerId) || msg.sender == wagers.getTaker(wagerId));
         _;
     }
 
-
- 
-    // Constructor 
-    constructor () payable { 
-        //OAR = OraclizeAddrResolverI(0x6f485c8bf6fc43ea212e93bbf8ce046c7f1cb475);                
+    // Constructor
+    constructor () payable {
+        OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+        lastMonth = 1; // Last entries default to 0, set the last month to 1 to allow people to enter the first lottery
+        nextMonth = block.timestamp + monthSeconds;
         mevuWallet = msg.sender;
-        newMonth = block.timestamp + monthSeconds;       
     }
 
-    function () payable {        
-                
-    }  
+    function () payable {
+
+    }
 
     function setEventsContract (address thisAddr) external onlyOwner { events = Events(thisAddr); }
 
@@ -77,50 +82,13 @@ contract Mevu is AuthorityGranter {
     function setAdminContract (address thisAddr) external onlyOwner { admin = Admin(thisAddr); }
 
     function setWagersContract (address thisAddr) external onlyOwner { wagers = Wagers(thisAddr); }
- 
-    function setMvuTokenContract (address thisAddr) external onlyOwner { mvuToken = MintableToken(thisAddr); } 
-  
-    // function __callback (bytes32 myid, string result)  notPaused {        
-    //      require(validIds[myid]);
-    //      require(msg.sender == oraclize_cbAddress());      
-       
-        
-    //     if (randomNumRequired) {        
-    //          uint maxRange = 2**(8* 7); // this is the highest uint we want to get. It should never be greater than 2^(8*N), where N is the number of random bytes we had asked the datasource to return
-    //          uint randomNumber = uint(keccak256(result)) % maxRange; // this is an efficient way to get the uint out in the [0, maxRange] range
-    //          randomNumRequired = false;   
-    //          address potentialWinner = oracles.getOracleListAt(randomNumber);
-    //          payoutLottery(potentialWinner);
-    //     } 
-    //     checkLottery();
 
-        
-        
-    //     //else {             
-    //     //     bytes32 queryId;  
-    //     //     if (lastIteratedIndex == -1) {               
-    //     //        //events.determineEventStage(events.getActiveEventId(lastIteratedIndex), lastIteratedIndex);
-    //     //         lastIteratedIndex = int(events.getActiveEventsLength()-1);
-                
-    //     //         //checkLottery();
-    //     //         NewOraclizeQuery("Last active event processed, callback being set for admin interval.");
-    //     //         queryId =  oraclize_query(admin.getCallbackInterval(), "URL", "", admin.getCallbackGasLimit());
-    //     //         validIds[queryId] = true; 
-    //     //     } else {
-    //     //         events.determineEventStage(events.getActiveEventId(uint(lastIteratedIndex)), uint(lastIteratedIndex));               
-               
-    //     //         lastIteratedIndex --;
-    //     //         NewOraclizeQuery("Not done yet, querying right away again."); 
-    //     //         queryId = oraclize_query("URL", "", admin.getCallbackGasLimit());
-    //     //         validIds[queryId] = true;        
-    //     //     }            
-    //     // } 
-    // }    
+    function setMvuTokenContract (address thisAddr) external onlyOwner { mvuToken = MintableToken(thisAddr); }
 
     function setMevuWallet (address newAddress) external onlyOwner {
-        mevuWallet = newAddress;       
-    }   
-   
+        mevuWallet = newAddress;
+    }
+
     function abandonContract() external onlyPaused {
         require(!abandoned[msg.sender]);
         abandoned[msg.sender] = true;
@@ -128,99 +96,119 @@ contract Mevu is AuthorityGranter {
         uint mvuBalance = rewards.getMvuBalance(msg.sender);
         playerFunds -= ethBalance;
         if (ethBalance > 0) {
-            msg.sender.transfer(ethBalance);           
+            msg.sender.transfer(ethBalance);
         }
         if (mvuBalance > 0) {
             mvuToken.transfer(msg.sender, mvuBalance);
         }
-    } 
+    }
 
+    function getLotteryPot() external view returns (uint) {
+        return lotteryBalance;
+    }
 
-    // /** @dev Calls the oraclize contract for a random number generated through the Wolfram Alpha engine
-    //   * @param max uint which corresponds to entries in oracleList array.
-    //   */ 
-    // function randomNum(uint max) private {
-    //     randomNumRequired = true;
-    //     string memory qString = strConcat("random number between 0 and ", bytes32ToString(uintToBytes(max)));        
-    //     bytes32 queryId = oraclize_query("Wolfram Alpha", qString);
-    //     validIds[queryId] = true;
-    // }       
-    
-    // function callRandomNum (uint max) internal {
-    //     randomNum(max);
-    // }
+    function getLotteryEntrantCount() external view returns (uint) {
+        return lotteryEntrants.length;
+    }
 
-    // /** @dev Checks to see if a month (in seconds) has passed since the last lottery paid out, pays out if so    
-    //   */ 
-    // function checkLottery() internal {       
-    //     if (block.timestamp > newMonth) {
-    //         addMonth();
-    //         randomNum(oracles.getOracleListLength()-1);
-    //     }
-    // }
+    function enterLottery() external returns (bool) {
+        require(allowedToWin(msg.sender));
+        // Users may not enter more than once
+        require(lastLotteryEntryTimes[msg.sender] < lastMonth);
 
-    // /** @dev Pays out the monthly lottery balance to a random oracle.   
-    //   */ 
-    // function payoutLottery(address potentialWinner) internal { 
-    
-    //     if (allowedToWin(potentialWinner)) {           
-    //         uint thisWin = lotteryBalance;
-    //         lotteryBalance = 0;                
-    //         potentialWinner.transfer(thisWin);
-    //         randomNumRequired = true;
-    //         NewOraclizeQuery("Winner paid, calling after another month");
-    //         bytes32 queryId = oraclize_query(newMonth - block.timestamp, "URL", "", admin.getCallbackGasLimit());
-    //         validIds[queryId] = true;  
+        // Keep track of most recent entry to prevent multiple entries
+        lastLotteryEntryTimes[msg.sender] = block.timestamp;
+        lotteryEntrants.push(msg.sender);
 
-    //     } else {
-    //         require(oracles.getOracleListLength() > 0);
-    //         randomNum(oracles.getOracleListLength()-1);            
-    //     }       
-        
-    // }
+        emit OracleEnteredLottery(msg.sender);
 
-    // PLayers should call this when an event has been cancelled after thay have made a wager
+        return true;
+    }
+
+    /** @dev Runs lottery
+      */
+    function runLottery() {
+        require(block.timestamp > nextMonth);
+        require(lotteryEntrants.length > 0);
+        bytes32 queryId = oraclize_query("WolframAlpha", strConcat("random number between 0 and ", uint2str(lotteryEntrants.length - 1)));
+                        //oraclize_newRandomDSQuery(/* Delay */ 0, /* Random Bytes */ 7, /* Callback Gas */ admin.getCallbackGasLimit());
+        emit NewOraclizeQuery("Getting random number for picking the lottery winner");
+        validIds[queryId] = true;
+    }
+
+    function __callback (bytes32 _queryId, string _result) public {
+        emit OraclizeQueryResponse(_result);
+        require(validIds[_queryId]);
+        require(msg.sender == oraclize_cbAddress());
+
+        // Invalidate the query ID so it cannot be reused
+        validIds[_queryId] = false;
+
+        uint maxRange = lotteryEntrants.length; // The max number should be no more than the number of entrants - 1
+        uint randomNumber = parseInt(_result) % maxRange;
+        emit ReceivedRandomNumber(randomNumber);
+
+        payoutLottery(randomNumber);
+    }
+
+    /** @dev Pays out the monthly lottery balance to a random oracle.
+      */
+    function payoutLottery(uint winnerIndex) notPaused internal {
+        address potentialWinner = lotteryEntrants[winnerIndex];
+        if (allowedToWin(potentialWinner)) {
+            uint thisWin = lotteryBalance;
+            lotteryEntrants.length = 0;
+            addMonth();
+            lotteryBalance = 0;
+            potentialWinner.transfer(thisWin);
+        } else {
+            // Winner is no longer allowed to win
+            // Swap winner with last entrant and then decrease the size of the list (don't need to actually retain old entrant)
+            lotteryEntrants[winnerIndex] = lotteryEntrants[lotteryEntrants.length - 1];
+            lotteryEntrants.length = lotteryEntrants.length - 1;
+            require(oracles.getOracleListLength() > 0);
+            runLottery();
+        }
+    }
+
+    function allowedToWin (address potentialWinner) internal view returns (bool) {
+        return mvuToken.balanceOf(potentialWinner) > 0
+        && block.timestamp - events.getEndTime(oracles.getLastEventOraclized(potentialWinner)) < admin.getMaxOracleInterval()
+        && rewards.getOracleRep(potentialWinner) > 0
+        && rewards.getPlayerRep(potentialWinner) >= 0;
+    }
+
+    // Players should call this when an event has been cancelled after they have made a wager
     function playerRefund (bytes32 wagerId) external  onlyBettor(wagerId) {
         require (events.getCancelled(wagers.getEventId(wagerId)));
         require (!wagers.getRefund(msg.sender, wagerId));
         wagers.setRefund(msg.sender, wagerId);
-        address maker = wagers.getMaker(wagerId);       
+        address maker = wagers.getMaker(wagerId);
         wagers.setSettled(wagerId);
         if(msg.sender == maker) {
             rewards.addUnlockedEth(maker, wagers.getOrigValue(wagerId));
-        } else {         
-            rewards.addUnlockedEth(wagers.getTaker(wagerId), (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
-        }        
-    } 
-
-    function allowedToWin (address potentialWinner) internal view returns (bool) {
-        if (mvuToken.balanceOf(potentialWinner) > 0 && 
-        (block.timestamp - events.getEndTime(oracles.getLastEventOraclized(potentialWinner)) < 
-        admin.getMaxOracleInterval()) && rewards.getOracleRep(potentialWinner) > 0 && rewards.getPlayerRep(potentialWinner) > 0)
-        {
-            return true;
         } else {
-            return false;
-        } 
-    }   
-    
-    function pauseContract() 
-        external
-        onlyOwner 
-    {
-        contractPaused = true;    
+            rewards.addUnlockedEth(wagers.getTaker(wagerId), (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
+        }
     }
 
-    // function restartContract(uint secondsFromNow) 
-    //     external 
+    function pauseContract()
+    external
+    onlyOwner
+    {
+        contractPaused = true;
+    }
+
+    // function restartContract(uint secondsFromNow)
+    //     external
     //     onlyOwner
     //     payable
-    // {            
+    // {
     //     contractPaused = false;
     //     //lastIteratedIndex = int(events.getActiveEventsLength()-1);
     //     NewOraclizeQuery("Starting contract!");
     //     bytes32 queryId = oraclize_query(secondsFromNow, "URL", "", admin.getCallbackGasLimit());
-    //     validIds[queryId] = true;          
+    //     validIds[queryId] = true;
     // }
 
     function mevuWithdraw (uint amount) external onlyOwner {
@@ -229,18 +217,18 @@ contract Mevu is AuthorityGranter {
     }
 
 
-     function withdraw(
-        uint eth    
+    function withdraw(
+        uint eth
     )
-        notPaused   
-        external         
-    { 
+    notPaused
+    external
+    {
         require (rewards.getUnlockedEthBalance(msg.sender) >= eth);
         rewards.subUnlockedEth(msg.sender, eth);
         rewards.subEth(msg.sender, eth);
         //playerFunds -= eth;
-        msg.sender.transfer(eth);         
-    }    
+        msg.sender.transfer(eth);
+    }
 
     function addMevuBalance (uint amount) external onlyAuth { mevuBalance += amount; }
 
@@ -248,25 +236,31 @@ contract Mevu is AuthorityGranter {
     //     lastIteratedIndex++;
     // }
 
-    function addLotteryBalance (uint amount) external onlyAuth { lotteryBalance += amount; } 
+    function addLotteryBalance (uint amount) external onlyAuth {
+        lotteryBalance += amount;
+        emit LotteryPotIncreased(amount);
+    }
 
     function addToPlayerFunds (uint amount) external onlyAuth { playerFunds += amount; }
 
     function subFromPlayerFunds (uint amount) external onlyAuth { playerFunds -= amount; }
 
-    function transferEth (address recipient, uint amount) external onlyAuth { recipient.transfer(amount); }       
+    function transferEth (address recipient, uint amount) external onlyAuth { recipient.transfer(amount); }
 
-    function getContractPaused() external view returns (bool) { return contractPaused; }     
+    function getContractPaused() external view returns (bool) { return contractPaused; }
 
     function getOracleFee () external view returns (uint256) { return oracleServiceFee; }
 
     function transferTokensToMevu (address oracle, uint mvuStake) internal { mvuToken.transferFrom(oracle, this, mvuStake); }
 
     function transferTokensFromMevu (address oracle, uint mvuStake) external onlyAuth { mvuToken.transfer(oracle, mvuStake); }
-  
-    function addMonth () internal { newMonth += monthSeconds; }  
-   
-    function getNewMonth () internal view returns (uint256) { return newMonth; }  
+
+    function addMonth () internal {
+        lastMonth = nextMonth;
+        nextMonth += monthSeconds;
+    }
+
+    function getNextMonth () internal view returns (uint256) { return nextMonth; }
 
     function uintToBytes(uint v) internal view returns (bytes32 ret) {
         if (v == 0) {
@@ -291,12 +285,12 @@ contract Mevu is AuthorityGranter {
             }
         }
         return string(bytesString);
-    } 
+    }
 
-        /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
-     *  been cancelled, refunds all eth.               
-     *  @param wagerId bytes32 wagerId of the wager to abort.  
-     */ 
+    /** @dev Aborts a standard wager where the creators disagree and there are not enough oracles or because the event has
+ *  been cancelled, refunds all eth.
+ *  @param wagerId bytes32 wagerId of the wager to abort.
+ */
     function abortWager(bytes32 wagerId) onlyBettor(wagerId) external {
 
         require (events.getCancelled(wagers.getEventId(wagerId)));
@@ -304,12 +298,12 @@ contract Mevu is AuthorityGranter {
         address maker = wagers.getMaker(wagerId);
         address taker = wagers.getTaker(wagerId);
         wagers.setSettled(wagerId);
-        rewards.addUnlockedEth(maker, wagers.getOrigValue(wagerId));    
-      
-        if (taker != address(0)) {         
-            rewards.addUnlockedEth(taker, (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));       
-        }   
-        emit Aborted(wagerId);          
-    }  
-    
-} 
+        rewards.addUnlockedEth(maker, wagers.getOrigValue(wagerId));
+
+        if (taker != address(0)) {
+            rewards.addUnlockedEth(taker, (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
+        }
+        emit Aborted(wagerId);
+    }
+
+}
