@@ -213,6 +213,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
 
     function mevuWithdraw (uint amount) external onlyOwner {
         require(mevuBalance >= amount);
+        mevuBalance -= amount;
         mevuWallet.transfer(amount);
     }
 

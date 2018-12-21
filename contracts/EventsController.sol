@@ -59,6 +59,7 @@ contract EventsController is Ownable {
     function setMevuContract (address thisAddress) external onlyOwner { mevu = Mevu(thisAddress); }
 
 
+    // DONT FORGET TO INCLUDE "DRAW" as a team if a draw is possible
     function makeEvent (bytes32 id, uint startTime, uint duration, bytes32[] teams, bool drawPossible)
         onlyVerified
         isNotMade(id)

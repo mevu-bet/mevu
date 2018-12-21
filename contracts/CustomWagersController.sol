@@ -24,7 +24,7 @@ contract CustomWagersController is Ownable {
     }
  
     modifier mustBeEnded (bytes32 wagerId) {
-        require (customWagers.getEndTime(wagerId) > block.timestamp);
+        require (customWagers.getEndTime(wagerId) < block.timestamp);
         _;
     }
 
@@ -176,9 +176,9 @@ contract CustomWagersController is Ownable {
             customWagers.setTakerWinVote (wagerId, winnerVote);
         }
         
-        if (customWagers.getTakerWinVote(wagerId) != 0 && customWagers.getMakerWinVote(wagerId) != 0) {
-            settle(wagerId);            
-        }  
+         if (customWagers.getTakerWinVote(wagerId) != 0 && customWagers.getMakerWinVote(wagerId) != 0) {
+             settle(wagerId);            
+         }  
     }
 
     function submitJudgeVote (bytes32 wagerId, uint vote)
@@ -198,7 +198,7 @@ contract CustomWagersController is Ownable {
    
     function settle(bytes32 wagerId) internal {
         address maker = customWagers.getMaker(wagerId);
-        address taker = customWagers.getMaker(wagerId);
+        address taker = customWagers.getTaker(wagerId);
         uint origValue = customWagers.getOrigValue(wagerId);
         uint payoutValue = customWagers.getWinningValue(wagerId); 
         uint fee = (payoutValue/100) * 2; // Sevice fee is 2 percent

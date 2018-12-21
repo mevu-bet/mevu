@@ -54,7 +54,7 @@ contract OraclesController is Ownable {
     }
 
     modifier noWinner (bytes32 eventId) {
-        require (events.getWinner(eventId) == 4);
+        require (events.getWinner(eventId) == events.getNumOutcomes(eventId));
         _;
     }
 

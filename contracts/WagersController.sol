@@ -100,7 +100,7 @@ contract WagersController is Ownable {
         // } else {
         //     takerChoice = 1;
         // }
-        uint winningValue = value + (value / (odds/100));       
+        uint winningValue = value + (value*100) / odds;       
         wagers.makeWager( 
             wagerId,
             eventId,

@@ -145,7 +145,7 @@ contract Events is AuthorityGranter {
             setWinner(eventId, oracles.getCurrentWinner(eventId));
 
         } else {
-            setWinner(eventId, 4); // No clear winner
+            setWinner(eventId, standardEvents[eventId].teams.length); // No clear winner
         }
     }     
 
@@ -209,13 +209,7 @@ contract Events is AuthorityGranter {
 
     function getMakerBond (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].makerBond; }
 
-    function getNumOutcomes (bytes32 eventId) external view returns (uint) {
-        if (standardEvents[eventId].drawPossible) {
-            return standardEvents[eventId].teams.length + 1;
-        } else {
-            return standardEvents[eventId].teams.length;
-        }
-    }
+    function getNumOutcomes (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].teams.length; }
 
     function getTeams (bytes32 eventId) external view returns (bytes32[]) { return standardEvents[eventId].teams; }
 
