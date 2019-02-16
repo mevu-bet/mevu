@@ -93,7 +93,7 @@ contract WagersController is Ownable {
     external
     payable
     {
-        require(makerChoice < events.getNumOutcomes(eventId));
+        require(makerChoice <= events.getNumOutcomes(eventId));
       
         // if (makerChoice == 1) {
         //     takerChoice = 2;
@@ -125,7 +125,24 @@ contract WagersController is Ownable {
         payable
     {
        
-        uint expectedValue = wagers.getOrigValue(id) / (wagers.getOdds(id) / 100);
+        uint expectedValue;
+
+        uint odds = wagers.getOdds(id);
+
+
+
+
+        if (odds < 100){         
+           
+            expectedValue = wagers.getOrigValue(id) * (100 / odds);
+        } else if (odds > 100) {
+            uint diff = odds - 100;
+            uint divider = (100/diff) + 1;
+            expectedValue = wagers.getOrigValue(id) - (wagers.getOrigValue(id)/divider);
+            //expectedValue = wagers.getOrigValue(id) / (wagers.getOdds(id) / 100);
+        } else {
+            expectedValue = wagers.getOrigValue(id);
+        }
         require (rewards.getUnlockedEthBalance(msg.sender) + msg.value >= expectedValue);         
         rewards.subUnlockedEth(msg.sender, (expectedValue - msg.value));        
         rewards.addEth(msg.sender, msg.value);
@@ -223,7 +240,7 @@ contract WagersController is Ownable {
       */
     function settle(bytes32 wagerId, bytes32 eventId) internal {
         address maker = wagers.getMaker(wagerId);
-        address taker = wagers.getMaker(wagerId);
+        address taker = wagers.getTaker(wagerId);
         uint origValue = wagers.getOrigValue(wagerId);
         uint payoutValue = wagers.getWinningValue(wagerId); 
         uint fee = (payoutValue/100) * 2; // Sevice fee is 2 percent
@@ -236,7 +253,7 @@ contract WagersController is Ownable {
                 rewards.subEth(maker, origValue);                
                 rewards.subEth(taker, wagers.getWinningValue(wagerId) - origValue);
             } else {
-                if (wagers.getMakerWinVote(wagerId) == 3) {
+                if (wagers.getMakerWinVote(wagerId) == 0) { /// No winner could be decided
                     wagers.setWinner(wagerId, address(0));                    
                 } else {
                     rewards.subEth(taker, wagers.getWinningValue(wagerId) - origValue);

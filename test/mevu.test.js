@@ -52,7 +52,7 @@ contract('Mevu', function (accounts) {
     let oraclePeriod = 1800;
 
     let teams = [web3.sha3('team1'),
-        web3.sha3('team2')];
+    web3.sha3('team2')];
 
     let balanceA;
     let balanceB;
@@ -395,6 +395,7 @@ contract('Mevu', function (accounts) {
             await wagersController.makeWager(web3.sha3("wager5"), web3.sha3("test_event5"), wagerAmount, 100, 0, { from: accounts[8], value: wagerAmount }).should.be.fulfilled;
             await wagersController.makeWager(web3.sha3("wager6"), web3.sha3("test_event4"), wagerAmount, 100, 0, { from: accounts[10], value: wagerAmount }).should.be.fulfilled;
             await wagersController.makeWager(web3.sha3("wager7"), web3.sha3("test_event5"), wagerAmount, 100, 0, { from: accounts[12], value: wagerAmount }).should.be.fulfilled;
+            await wagersController.makeWager(web3.sha3("wager8"), web3.sha3("test_event5"), wagerAmount, 10, 2, { from: accounts[14], value: wagerAmount }).should.be.fulfilled;
         });
 
         it("it should not let anyone make a wager for an event which has ended", async function () {
@@ -403,14 +404,14 @@ contract('Mevu', function (accounts) {
 
         it("it should let anyone make a custom wager with no judge", async function () {
             let balanceA = web3.eth.getBalance(accounts[0]).valueOf();
-            await customWagersController.makeWager(web3.sha3("wager1"), latestTime() + 10, latestTime()+10000, 1, wagerAmount, 100, { value: wagerAmount }).should.be.fulfilled;
+            await customWagersController.makeWager(web3.sha3("wager1"), latestTime() + 10, latestTime() + 10000, 1, wagerAmount, 100, { value: wagerAmount }).should.be.fulfilled;
             let maker = await customWagers.getMaker(web3.sha3("wager1"));
             maker.should.equal(accounts[0]);
             let newBalance = web3.eth.getBalance(accounts[0]).valueOf();
             let diff = balanceA - newBalance;
             diff.should.be.above(wagerAmount);
 
-            await customWagersController.makeWager(web3.sha3("wager2"), latestTime() + 20, latestTime()+10000, 1, wagerAmount, 100, { from: accounts[6], value: wagerAmount }).should.be.fulfilled;
+            await customWagersController.makeWager(web3.sha3("wager2"), latestTime() + 20, latestTime() + 10000, 1, wagerAmount, 100, { from: accounts[6], value: wagerAmount }).should.be.fulfilled;
 
             //await wagersController.makeWager(web3.sha3("wager2") , 10000000000000000, web3.sha3("test_event2"), 100, 1, {from:accounts[2], value:10000000000000000}).should.be.fulfilled;
         });
@@ -433,6 +434,7 @@ contract('Mevu', function (accounts) {
             await wagersController.takeWager(web3.sha3("wager5"), { from: accounts[9], value: wagerAmount }).should.be.fulfilled;
             await wagersController.takeWager(web3.sha3("wager6"), { from: accounts[11], value: wagerAmount }).should.be.fulfilled;
             await wagersController.takeWager(web3.sha3("wager7"), { from: accounts[13], value: wagerAmount }).should.be.fulfilled;
+            await wagersController.takeWager(web3.sha3("wager8"), { from: accounts[15], value: wagerAmount * 10 }).should.be.fulfilled;
         });
 
         it("it should let anyone take a custom wager", async function () {
@@ -462,24 +464,24 @@ contract('Mevu', function (accounts) {
 
 
 
-     describe('voting on custom wagers -- ', function () {
+    describe('voting on custom wagers -- ', function () {
         it("should not be able to vote until its over", async function () {
             await customWagersController.submitVote(web3.sha3("wager1"), 1).should.be.rejectedWith(EVMRevert);
-            
+
         });
         it("should let maker vote after its over", async function () {
             await increaseTimeTo(latestTime() + 103);
-            await customWagersController.submitVote(web3.sha3("wager1"), 1).should.be.fulfilled;          
-       
+            await customWagersController.submitVote(web3.sha3("wager1"), 1).should.be.fulfilled;
+
         });
         it("should let taker vote after its over", async function () {
-                  
-            await customWagersController.submitVote(web3.sha3("wager1"), 1, {from: accounts[1]}).should.be.fulfilled;
-       
+
+            await customWagersController.submitVote(web3.sha3("wager1"), 1, { from: accounts[1] }).should.be.fulfilled;
+
         });
 
 
-     });
+    });
 
 
 
@@ -597,7 +599,7 @@ contract('Mevu', function (accounts) {
             await wagersController.submitVote(web3.sha3("wager2"), 1, { from: accounts[2], gasPrice: 2000000000 }).should.be.fulfilled;
             let newBal = web3.eth.getBalance(accounts[2]).valueOf();
             let diff = newBal - bal;
-            diff.valueOf().should.be.within(18400000000000000,19400000000000000);
+            diff.valueOf().should.be.within(18400000000000000, 19400000000000000);
         });
 
         // it("should send funds after oracle win claim", async function () {
@@ -704,12 +706,12 @@ contract('Mevu', function (accounts) {
     });
 
     describe('cancelling events -- ', function () {
-        it("should let verified cancel an uncancelled standard event", async function () {           
-            await eventsController.cancelEvent(web3.sha3("test_event5"), {gasPrice: 2000000000 }).should.be.fulfilled;         
-            let cancelled = await events.getCancelled(web3.sha3("test_event5"));           
+        it("should let verified cancel an uncancelled standard event", async function () {
+            await eventsController.cancelEvent(web3.sha3("test_event5"), { gasPrice: 2000000000 }).should.be.fulfilled;
+            let cancelled = await events.getCancelled(web3.sha3("test_event5"));
             cancelled.should.be.true;
         });
-        it("should let bettors collect refund for a cancelled standard event", async function () {     
+        it("should let bettors collect refund for a cancelled standard event", async function () {
             await wagersController.cancelRefund(web3.sha3("wager7")).should.be.fulfilled;
         });
     });
@@ -786,7 +788,7 @@ contract('Mevu', function (accounts) {
 
     function eventOccurred(contract, eventName, timeout) {
         return new Promise((resolve, reject) => {
-            let event = contract[eventName]({}, {fromBlock: 0, toBlock: 'latest'});
+            let event = contract[eventName]({}, { fromBlock: 0, toBlock: 'latest' });
             event.watch((error, evt) => {
                 event.stopWatching();
                 resolve(evt);
