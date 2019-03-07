@@ -57,8 +57,8 @@ contract Oracles is AuthorityGranter {
     function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote, uint minOracleNum) external onlyAuth {
         uint[] memory newVotes = eventStructs[eventId].votes;
         uint[] memory newStakes = eventStructs[eventId].stakes;
-        uint numOutcomes = events.getNumOutcomes(eventId);
-        if (newVotes.length == 0) {
+        uint numOutcomes = events.getNumOutcomes(eventId) + 1; //because 0 means winner could not be decided. A tie is included as a team.
+         if (newVotes.length == 0) {
             newVotes = new uint[](numOutcomes); 
             newStakes = new uint[](numOutcomes);   
             for (uint i = 0; i < numOutcomes; i++){

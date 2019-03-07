@@ -15,8 +15,7 @@ contract CustomWagers is AuthorityGranter {
         address maker;
         address taker;
         address judge;        
-        address winner; 
-        address loser;
+        address winner;         
         bool makerCancelRequest;
         bool takerCancelRequest;       
         bool settled;        
@@ -57,8 +56,7 @@ contract CustomWagers is AuthorityGranter {
                                         maker,
                                         address(0),
                                         address(0),
-                                        address(0),
-                                        address(0),
+                                        address(0),                                       
                                         false,
                                         false,                                        
                                         false);
@@ -109,9 +107,9 @@ contract CustomWagers is AuthorityGranter {
         judgesVote[id] = vote;
     }
 
-    function setLoser (bytes32 id, address loser) external onlyAuth {
-        wagersMap[id].loser = loser;
-    }
+    // function setLoser (bytes32 id, address loser) external onlyAuth {
+    //     wagersMap[id].loser = loser;
+    // }
 
     function setWinningValue (bytes32 wagerId, uint value) external onlyAuth {
         wagersMap[wagerId].winningValue = value;
@@ -194,7 +192,16 @@ contract CustomWagers is AuthorityGranter {
     } 
     
     function getLoser (bytes32 wagerId) external view returns (address) {
-        return wagersMap[wagerId].loser;
+        address winner = wagersMap[wagerId].winner;
+        address maker = wagersMap[wagerId].maker;
+        address taker = wagersMap[wagerId].taker;
+        if (winner == taker) {
+            return maker;
+        } else if  (winner == maker) {
+            return taker;
+        } else {
+            return address(0);
+        }
     }
 
     function getJudge (bytes32 wagerId) external view returns (address) {
