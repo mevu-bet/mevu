@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Admin.sol"; 
 import "./CustomWagers.sol"; 
@@ -91,7 +91,7 @@ contract CustomWagersController is Ownable {
         admin = Admin(thisAddr);
     }
 
-    function setMevuContract (address thisAddr) external onlyOwner {
+    function setMevuContract (address payable thisAddr) external onlyOwner {
         mevu = Mevu(thisAddr);
     }
 
@@ -134,7 +134,7 @@ contract CustomWagersController is Ownable {
         emit WagerMade(id);
     }
 
-    function addJudge (bytes32 wagerId, address judge) onlyMaker(wagerId) notTaken(wagerId) external {
+    function addJudge (bytes32 wagerId, address payable judge) onlyMaker(wagerId) notTaken(wagerId) external {
         customWagers.addJudge(wagerId, judge);
     }
 
@@ -191,8 +191,8 @@ contract CustomWagersController is Ownable {
         customWagers.setSettled(wagerId);
         customWagers.setJudgesVote(wagerId, vote);      
         uint origValue = customWagers.getOrigValue(wagerId);
-        address maker = customWagers.getMaker(wagerId);
-        address taker = customWagers.getTaker(wagerId);
+        address payable maker = customWagers.getMaker(wagerId);
+        address payable taker = customWagers.getTaker(wagerId);
         uint payoutValue = customWagers.getWinningValue(wagerId);
         uint judgeFee = (payoutValue/100);
         uint fee = judgeFee * 3; // Sevice fee is 3 percent, 1 percent goes to judge
@@ -223,8 +223,8 @@ contract CustomWagersController is Ownable {
 
    
     function settle(bytes32 wagerId) internal {
-         address maker = customWagers.getMaker(wagerId);
-        address taker = customWagers.getTaker(wagerId);
+        address payable maker = customWagers.getMaker(wagerId);
+        address payable taker = customWagers.getTaker(wagerId);
         uint origValue = customWagers.getOrigValue(wagerId);
         uint payoutValue = customWagers.getWinningValue(wagerId); 
         uint fee = (payoutValue/100) * 2; // Sevice fee is 2 percent
@@ -254,7 +254,7 @@ contract CustomWagersController is Ownable {
     }
     
     function judgeCheck(bytes32 wagerId) internal {
-        address judge = customWagers.getJudge(wagerId); 
+        address payable judge = customWagers.getJudge(wagerId); 
         if (judge != address(0)) {
             emit JudgeNeeded (judge, wagerId);
         } else {
@@ -262,7 +262,7 @@ contract CustomWagersController is Ownable {
         }
     }
 
-    function tieJudged(address judge, address maker, address taker, uint origValue, uint payoutValue ) internal {
+    function tieJudged(address payable judge, address payable maker, address payable taker, uint origValue, uint payoutValue ) internal {
         // give judge 1 percent and reimburse all else
         uint judgeFee = payoutValue/100;
         uint makerRefund = origValue - (payoutValue/200);
@@ -284,7 +284,7 @@ contract CustomWagersController is Ownable {
     function payout(bytes32 wagerId, address maker, address taker, uint payoutValue, bool agreed) internal {  
         require(!customWagers.getSettled(wagerId));
         
-        address winner = customWagers.getWinner(wagerId);                      
+        address payable winner = customWagers.getWinner(wagerId);                      
         mevu.transferEth(winner, payoutValue);              
         if (agreed) {                             
             rewards.addPlayerRep(maker, admin.getPlayerAgreeRepReward());

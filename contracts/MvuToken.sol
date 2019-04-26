@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 
 import '../zeppelin-solidity/contracts/token/ERC20/MintableToken.sol';
 
@@ -14,7 +14,7 @@ contract MvuToken is MintableToken {
 
     event TokensMade(address indexed to, uint amount);   
 
-    constructor (uint initFounderSupply) {   
+    constructor (uint initFounderSupply) public {   
         balances[msg.sender] = initFounderSupply;
         emit TokensMade(msg.sender, initFounderSupply);      
         totalSupply_ += initFounderSupply;        

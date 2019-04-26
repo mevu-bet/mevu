@@ -1,28 +1,30 @@
 import latestTime from './latestTime';
-
+const { promisify } = require('util');
+const BN = web3.utils.BN;
 // Increases testrpc time by the passed duration in seconds
-export default function increaseTime (duration) {
-  const id = Date.now();
+export async function increase (duration) {
+  if (!BN.isBN(duration)) {
+    duration = new BN(duration);
+  }
 
-  return new Promise((resolve, reject) => {
-    web3.currentProvider.sendAsync({
-      jsonrpc: '2.0',
-      method: 'evm_increaseTime',
-      params: [duration],
-      id: id,
-    }, err1 => {
-      if (err1) return reject(err1);
+  if (duration.isNeg()) throw Error(`Cannot increase time by a negative amount (${duration})`);
 
-      web3.currentProvider.sendAsync({
-        jsonrpc: '2.0',
-        method: 'evm_mine',
-        id: id + 1,
-      }, (err2, res) => {
-        return err2 ? reject(err2) : resolve(res);
-      });
-    });
+  await promisify(web3.currentProvider.send.bind(web3.currentProvider))({
+    jsonrpc: '2.0',
+    method: 'evm_increaseTime',
+    params: [duration.toNumber()],
+  });
+
+  await advanceBlock();
+}
+
+function advanceBlock () {
+  return promisify(web3.currentProvider.send.bind(web3.currentProvider))({
+    jsonrpc: '2.0',
+    method: 'evm_mine',
   });
 }
+
 
 /**
  * Beware that due to the need of calling two separate testrpc methods and rpc calls overhead

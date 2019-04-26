@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 import "./AuthorityGranter.sol";
 import "./Oracles.sol";
 import "./Admin.sol";
@@ -19,12 +19,13 @@ contract Events is AuthorityGranter {
         uint duration; // Seconds
         uint numWagers;
         uint totalAmountBet;
+        uint[] totalAmountBetForTeam;
         uint totalAmountResolvedWithoutOracles;
         uint currentWinner;
         uint winner;
         uint makerBond;           
         uint activeEventIndex;        
-        address maker;
+        address payable maker;
         bytes32[] wagers;  
       
         bool cancelled;
@@ -37,6 +38,7 @@ contract Events is AuthorityGranter {
     mapping (bytes32 => bool) private activeEventsMapping;
     bytes32[] private emptyBytes32Array;
     bytes32[] public activeEvents;
+    uint[] public emptyUintArray;
     uint public eventsCount;
 
     function setOraclesContract (address thisAddr) external onlyOwner {
@@ -47,7 +49,7 @@ contract Events is AuthorityGranter {
         admin = Admin(thisAddr);
     }
 
-    function setMevuContract (address thisAddr) external onlyOwner {
+    function setMevuContract (address payable thisAddr) external onlyOwner {
         mevu = Mevu(thisAddr);
     }     
        
@@ -62,23 +64,28 @@ contract Events is AuthorityGranter {
         bytes32 id,        
         uint startTime,
         uint duration,
-        bytes32[] teams,
+        bytes32[] calldata teams,
         bool drawPossible,
         uint bondValue,
-        address maker
+        address payable maker
      
     )
         external
         onlyAuth            
     {        
-        StandardWagerEvent memory thisEvent;   
+        StandardWagerEvent memory thisEvent;
+        uint[] storage betsForArray = emptyUintArray;
+        for (uint p = 0; p < teams.length; p++) {
+            betsForArray.push(0);            
+        }
         thisEvent = StandardWagerEvent(                                        
             teams,
             drawPossible,
             startTime,
             duration,
             0,
-            0,                                    
+            0,
+            betsForArray,                                   
             0,
             0,
             0,
@@ -159,10 +166,16 @@ contract Events is AuthorityGranter {
         activeEventsMapping[eventId] = false;
     }
 
-    function removeWager (bytes32 eventId, uint value) external onlyAuth {
-        standardEvents[eventId].numWagers --;
-        standardEvents[eventId].totalAmountBet -= value;
-    }   
+    // function removeWager (bytes32 eventId, uint value, uint team) external onlyAuth {
+    //     standardEvents[eventId].numWagers --;
+    //     standardEvents[eventId].totalAmountBet[team] -= value;
+    // }   
+
+    function addWagerForTeam(bytes32 eventId, uint value, uint team) external onlyAuth {      
+        standardEvents[eventId].numWagers ++;
+        standardEvents[eventId].totalAmountBet += value;
+        standardEvents[eventId].totalAmountBetForTeam[team] += value;
+    }
 
     function addWager(bytes32 eventId, uint value) external onlyAuth {      
         standardEvents[eventId].numWagers ++;
@@ -191,6 +204,8 @@ contract Events is AuthorityGranter {
 
     function getTotalAmountBet (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].totalAmountBet; }
 
+    function getTotalAmountBetForTeam (bytes32 eventId, uint team) external view returns (uint) { return standardEvents[eventId].totalAmountBetForTeam[team]; }
+
     function getTotalAmountResolvedWithoutOracles (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].totalAmountResolvedWithoutOracles; }
 
     function getCancelled(bytes32 id) external view returns (bool) { return standardEvents[id].cancelled; }
@@ -205,19 +220,19 @@ contract Events is AuthorityGranter {
 
     function getLocked(bytes32 id) public view returns (bool) { return (block.timestamp > getEndTime(id) + admin.getOraclePeriod()); }
 
-    function getMaker (bytes32 eventId) external view returns (address) { return standardEvents[eventId].maker; }
+    function getMaker (bytes32 eventId) external view returns (address payable) { return standardEvents[eventId].maker; }
 
     function getMakerBond (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].makerBond; }
 
     function getNumOutcomes (bytes32 eventId) external view returns (uint) { return standardEvents[eventId].teams.length; }
 
-    function getTeams (bytes32 eventId) external view returns (bytes32[]) { return standardEvents[eventId].teams; }
+    function getTeams (bytes32 eventId) external view returns (bytes32[] memory) { return standardEvents[eventId].teams; }
 
     function getDrawPossible (bytes32 eventId) external view returns (bool) { return standardEvents[eventId].drawPossible; }
 
     function getThreshold (bytes32 eventId) external view returns (bool) { return standardEvents[eventId].threshold; }
 
-    function getWinner (bytes32 id) external view returns (uint) { return standardEvents[id].winner; }
+    function getWinner (bytes32 id) external view returns (uint) { return (standardEvents[id].threshold ? standardEvents[id].currentWinner : standardEvents[id].winner); }
 
     function getVoteReady (bytes32 id) public view returns (bool) { return (getEndTime(id) < block.timestamp); }   
 

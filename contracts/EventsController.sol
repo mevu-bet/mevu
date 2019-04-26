@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 // Let anyone make an event that isnt made (at most a week in the future at least not over) by using sha3 of standard naming scheme ex. (nhltormtl20180407) and buying a bonnd
 
 // vote ready will be based on time not a boolean variable
@@ -56,11 +56,11 @@ contract EventsController is Ownable {
 
     function setOracleVerifierContract (address thisAddress) external onlyOwner { oracleVerif = OracleVerifier(thisAddress); }
 
-    function setMevuContract (address thisAddress) external onlyOwner { mevu = Mevu(thisAddress); }
+    function setMevuContract (address payable thisAddress) external onlyOwner { mevu = Mevu(thisAddress); }
 
 
     // DONT FORGET TO INCLUDE "DRAW" as a team if a draw is possible
-    function makeEvent (bytes32 id, uint startTime, uint duration, bytes32[] teams, bool drawPossible)
+    function makeEvent (bytes32 id, uint startTime, uint duration,  bytes32[] calldata teams, bool drawPossible)
         onlyVerified
         isNotMade(id)
         minBond
@@ -79,7 +79,7 @@ contract EventsController is Ownable {
 
     function cancelEvent (bytes32 eventId) notCancelled(eventId) onlyVerified external {
         events.setCancelled(eventId);
-        mevu.transferEth(events.getMaker(eventId), events.getMakerBond(eventId));
+        mevu.transferEth(events.getMaker(eventId) , events.getMakerBond(eventId));
     }   
 
     // Called by event creator to finalize bet and remove from active array, if not called within win claim period then anyone can call and steal creators bond money

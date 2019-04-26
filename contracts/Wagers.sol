@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 //import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./AuthorityGranter.sol";
 contract Wagers is AuthorityGranter {
@@ -12,10 +12,10 @@ contract Wagers is AuthorityGranter {
         uint odds;
         uint makerWinnerVote;
         uint takerWinnerVote;
-        address maker;
-        address taker;        
-        address winner;
-        address loser;
+        address payable maker;
+        address payable taker;        
+        address payable winner;
+      
         bool makerCancelRequest;
         bool takerCancelRequest;
         bool locked;
@@ -37,7 +37,7 @@ contract Wagers is AuthorityGranter {
         uint odds,
         uint makerWinnerVote,
         uint takerWinnerVote,
-        address maker
+        address payable maker
         )
             external
             onlyAuth             
@@ -52,8 +52,7 @@ contract Wagers is AuthorityGranter {
                                         takerWinnerVote,
                                         maker,
                                         address(0),
-                                        address(0),
-                                        address(0),
+                                        address(0),                                       
                                         false,
                                         false,
                                         false,
@@ -83,11 +82,11 @@ contract Wagers is AuthorityGranter {
 
     function setTakerCancelRequest (bytes32 id) external onlyAuth { wagersMap[id].takerCancelRequest = true; }
 
-    function setTaker (bytes32 wagerId, address taker) external onlyAuth { wagersMap[wagerId].taker = taker; }
+    function setTaker (bytes32 wagerId, address payable taker) external onlyAuth { wagersMap[wagerId].taker = taker; }
 
-    function setWinner (bytes32 id, address winner) external onlyAuth { wagersMap[id].winner = winner; }
+    function setWinner (bytes32 id, address payable winner) external onlyAuth { wagersMap[id].winner = winner; }
 
-    function setLoser (bytes32 id, address loser) external onlyAuth { wagersMap[id].loser = loser; }
+    //function setLoser (bytes32 id, address loser) external onlyAuth { wagersMap[id].loser = loser; }
 
     function setWinningValue (bytes32 wagerId, uint value) external onlyAuth { wagersMap[wagerId].winningValue = value; }
 
@@ -97,9 +96,9 @@ contract Wagers is AuthorityGranter {
 
     function getSettled (bytes32 id) external view returns (bool) { return wagersMap[id].settled; }
 
-    function getMaker(bytes32 id) external view returns (address) { return wagersMap[id].maker; }
+    function getMaker(bytes32 id) external view returns (address payable) { return wagersMap[id].maker; }
 
-    function getTaker(bytes32 id) external view returns (address) { return wagersMap[id].taker; }
+    function getTaker(bytes32 id) external view returns (address payable) { return wagersMap[id].taker; }
 
     function getMakerChoice (bytes32 id) external view returns (uint) { return wagersMap[id].makerChoice; }
 
@@ -121,9 +120,9 @@ contract Wagers is AuthorityGranter {
 
     function getWinningValue (bytes32 id) external view returns (uint) { return wagersMap[id].winningValue; }
 
-    function getWinner (bytes32 id) external view returns (address) { return wagersMap[id].winner; }
+    function getWinner (bytes32 id) external view returns (address payable) { return wagersMap[id].winner; }
 
-    function getLoser (bytes32 id) external view returns (address) { return wagersMap[id].loser; }
+    //function getLoser (bytes32 id) external view returns (address) { return wagersMap[id].loser; }
     
     function getMakerWinVoted (bytes32 id) external view returns (bool) { return wagersMap[id].makerVoted; }
 

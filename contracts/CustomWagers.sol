@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 import "./AuthorityGranter.sol";
 contract CustomWagers is AuthorityGranter {
         
@@ -12,10 +12,10 @@ contract CustomWagers is AuthorityGranter {
         uint odds;
         uint makerWinnerVote;
         uint takerWinnerVote;
-        address maker;
-        address taker;
-        address judge;        
-        address winner;         
+        address payable maker;
+        address payable taker;
+        address payable judge;        
+        address payable winner;         
         bool makerCancelRequest;
         bool takerCancelRequest;       
         bool settled;        
@@ -38,7 +38,7 @@ contract CustomWagers is AuthorityGranter {
         uint odds,
         uint makerWinnerVote,
         uint takerWinnerVote,
-        address maker
+        address payable maker
         
         )
             external
@@ -63,7 +63,7 @@ contract CustomWagers is AuthorityGranter {
         wagersMap[wagerId] = thisWager;       
     }
 
-    function addJudge (bytes32 wagerId, address judge) external onlyAuth {
+    function addJudge (bytes32 wagerId, address payable judge) external onlyAuth {
         wagersMap[wagerId].judge = judge;
     }
 
@@ -95,11 +95,11 @@ contract CustomWagers is AuthorityGranter {
         wagersMap[id].takerCancelRequest = true;
     }
 
-    function setTaker (bytes32 wagerId, address taker) external onlyAuth {
+    function setTaker (bytes32 wagerId, address payable taker) external onlyAuth {
         wagersMap[wagerId].taker = taker;
     }
 
-    function setWinner (bytes32 id, address winner) external onlyAuth {
+    function setWinner (bytes32 id, address payable winner) external onlyAuth {
         wagersMap[id].winner = winner;        
     }
 
@@ -139,11 +139,11 @@ contract CustomWagers is AuthorityGranter {
         return wagersMap[id].settled;
     }
 
-    function getMaker(bytes32 wagerId) external view returns (address) {
+    function getMaker(bytes32 wagerId) external view returns (address payable) {
         return wagersMap[wagerId].maker;
     }
 
-    function getTaker(bytes32 wagerId) external view returns (address) {
+    function getTaker(bytes32 wagerId) external view returns (address payable) {
         return wagersMap[wagerId].taker;
     }
 
@@ -187,14 +187,14 @@ contract CustomWagers is AuthorityGranter {
         return wagersMap[wagerId].winningValue;
     }
 
-    function getWinner (bytes32 wagerId) external view returns (address) {
+    function getWinner (bytes32 wagerId) external view returns (address payable) {
         return wagersMap[wagerId].winner;
     } 
     
-    function getLoser (bytes32 wagerId) external view returns (address) {
-        address winner = wagersMap[wagerId].winner;
-        address maker = wagersMap[wagerId].maker;
-        address taker = wagersMap[wagerId].taker;
+    function getLoser (bytes32 wagerId) external view returns (address payable) {
+        address payable winner = wagersMap[wagerId].winner;
+        address payable maker = wagersMap[wagerId].maker;
+        address payable taker = wagersMap[wagerId].taker;
         if (winner == taker) {
             return maker;
         } else if  (winner == maker) {
@@ -204,7 +204,7 @@ contract CustomWagers is AuthorityGranter {
         }
     }
 
-    function getJudge (bytes32 wagerId) external view returns (address) {
+    function getJudge (bytes32 wagerId) external view returns (address payable) {
         return wagersMap[wagerId].judge;
     }
 

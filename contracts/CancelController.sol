@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./CustomWagers.sol"; 
 import "./Wagers.sol";
@@ -57,7 +57,7 @@ contract CancelController is Ownable {
         _;
     }
 
-    function setMevuContract (address thisAddr) external onlyOwner {
+    function setMevuContract (address payable thisAddr) external onlyOwner {
         mevu = Mevu(thisAddr);
     }
 

@@ -1,5 +1,5 @@
 
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Admin.sol"; 
 import "./Wagers.sol"; 
@@ -76,7 +76,7 @@ contract WagersController is Ownable {
 
     function setAdminContract (address thisAddr) external onlyOwner { admin = Admin(thisAddr); }
 
-    function setMevuContract (address thisAddr) external onlyOwner { mevu = Mevu(thisAddr); }
+    function setMevuContract (address payable thisAddr) external onlyOwner { mevu = Mevu(thisAddr); }
 
  
     function makeWager(
@@ -239,8 +239,8 @@ contract WagersController is Ownable {
       * @param wagerId bytes32 id for the wager.         
       */
     function settle(bytes32 wagerId, bytes32 eventId) internal {
-        address maker = wagers.getMaker(wagerId);
-        address taker = wagers.getTaker(wagerId);
+        address payable maker = wagers.getMaker(wagerId);
+        address payable taker = wagers.getTaker(wagerId);
         uint origValue = wagers.getOrigValue(wagerId);
         uint payoutValue = wagers.getWinningValue(wagerId); 
         uint fee = (payoutValue/100) * 2; // Sevice fee is 2 percent
@@ -280,15 +280,15 @@ contract WagersController is Ownable {
     }
 
     function lateSettle (bytes32 wagerId, uint eventWinner) internal {
-        address maker = wagers.getMaker(wagerId);
-        address taker = wagers.getTaker(wagerId);
+        address payable maker = wagers.getMaker(wagerId);
+        address payable taker = wagers.getTaker(wagerId);
         if (wagers.getMakerChoice(wagerId) == eventWinner) {
             wagers.setWinner(wagerId, maker);
-            wagers.setLoser(wagerId, taker); 
+            //wagers.setLoser(wagerId, taker); 
             emit Winner(maker);              
         } else {     
             wagers.setWinner(wagerId, taker);
-            wagers.setLoser(wagerId, maker);     
+            //wagers.setLoser(wagerId, maker);     
             emit Winner(taker);  
         } 
        
@@ -303,7 +303,7 @@ contract WagersController is Ownable {
         wagers.setSettled(wagerId);           
       //  uint origVal =  wagers.getOrigValue(wagerId);
         uint winVal = wagers.getWinningValue(wagerId);
-        address winner = wagers.getWinner(wagerId);
+        address payable winner = wagers.getWinner(wagerId);
             // if (winner == address(0)) { //Tie
             //     mevu.transferEth(maker, origVal);
             //     mevu.transferEth(taker, winVal-origVal);                 
@@ -334,8 +334,8 @@ contract WagersController is Ownable {
         mevu.addMevuBalance((fee/2) -  (payoutValue/admin.getEventMakerRewardDivider()));            
         mevu.addLotteryBalance(fee/12);
         payoutValue -= fee;            
-        address maker = wagers.getMaker(wagerId);
-        address taker = wagers.getTaker(wagerId);                    
+        address payable maker = wagers.getMaker(wagerId);
+        address payable taker = wagers.getTaker(wagerId);                    
         if (wagers.getWinner(wagerId) == maker) { // Maker won
             //rewards.addUnlockedEth(maker, payoutValue);
             rewards.subEth(maker, origValue);

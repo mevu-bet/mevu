@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 import "./Events.sol";
 import "./Oracles.sol";
 import "./OracleVerifier.sol";
@@ -78,7 +78,7 @@ contract OraclesController is Ownable {
 
     function setOraclesContract (address thisAddr) external onlyOwner { oracles = Oracles(thisAddr); }
 
-    function setMevuContract (address thisAddr) external onlyOwner { mevu = Mevu(thisAddr); }
+    function setMevuContract (address payable thisAddr) external onlyOwner { mevu = Mevu(thisAddr); }
 
     function setMvuTokenContract (address thisAddr) external onlyOwner { mvuToken = MvuToken(thisAddr); }
 
@@ -105,6 +105,7 @@ contract OraclesController is Ownable {
         //require (keccak256(strConcat(addrToString(msg.sender),  bytes32ToString(eventId))) == oracleId);
         require (!oracles.getRegistered(msg.sender, eventId));
         require(mvuStake >= admin.getMinOracleStake());
+        require(winnerVote < events.getNumOutcomes(eventId) + 2);
         //require(winnerVote == 1 || winnerVote == 2 || winnerVote == 3);
         oracles.setRegistered(msg.sender, eventId);
         bytes32 empty;
@@ -126,6 +127,7 @@ contract OraclesController is Ownable {
         notClaimed(eventId)
         eventLocked(eventId)
         thresholdReached(eventId)
+        external
     {
         oracles.setPaid(msg.sender, eventId);
         uint ethReward;
@@ -180,6 +182,7 @@ contract OraclesController is Ownable {
         onlyOracle(eventId)
         eventLocked(eventId)
         noWinner(eventId)
+        external
     {
         oracles.setRefunded(msg.sender, eventId);
         uint amount;
@@ -191,7 +194,7 @@ contract OraclesController is Ownable {
     }
 
     function transferTokensToMevu (address oracle, uint mvuStake) internal {
-        mvuToken.transferFrom(oracle, mevu, mvuStake);
+        mvuToken.transferFrom(oracle, address(mevu), mvuStake);
     }
 
     function withdraw (uint mvu) external {

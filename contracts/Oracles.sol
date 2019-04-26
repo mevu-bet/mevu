@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 //import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./AuthorityGranter.sol";
 import './Events.sol';
@@ -57,8 +57,8 @@ contract Oracles is AuthorityGranter {
     function addOracle (address oracle, bytes32 eventId, uint mvuStake, uint winnerVote, uint minOracleNum) external onlyAuth {
         uint[] memory newVotes = eventStructs[eventId].votes;
         uint[] memory newStakes = eventStructs[eventId].stakes;
-        uint numOutcomes = events.getNumOutcomes(eventId) + 1; //because 0 means winner could not be decided. A tie is included as a team.
-         if (newVotes.length == 0) {
+        uint numOutcomes = events.getNumOutcomes(eventId) + 1; //because numTeams + 1 means winner could not be decided. A tie is included as a team.
+        if (newVotes.length == 0) {
             newVotes = new uint[](numOutcomes); 
             newStakes = new uint[](numOutcomes);   
             for (uint i = 0; i < numOutcomes; i++){
@@ -71,8 +71,8 @@ contract Oracles is AuthorityGranter {
                 }
             }                    
         } else {
-            newVotes[winnerVote] = newVotes[winnerVote] + 1;
-            newStakes[winnerVote] =  newStakes[winnerVote] + mvuStake;
+            newVotes[winnerVote] += 1;
+            newStakes[winnerVote] += mvuStake;
         }
 
         OracleStruct memory thisOracle; 

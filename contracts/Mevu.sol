@@ -1,23 +1,25 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 import "./AuthorityGranter.sol";
-import "../ethereum-api/oraclizeAPI.sol";
+//import "../ethereum-api/oraclizeAPI.sol";
 import "./Events.sol";
 import "./Admin.sol";
 import "./Wagers.sol";
+import "./PoolWagers.sol";
 import "./Rewards.sol";
 import "./Oracles.sol";
 //import "./MvuToken.sol";
 import "../zeppelin-solidity/contracts/token/ERC20/MintableToken.sol";
 
-contract Mevu is AuthorityGranter, usingOraclize {
+contract Mevu is AuthorityGranter {//, usingOraclize {
 
-    address private mevuWallet;
+    address payable private mevuWallet;
     Events private events;
     Admin private admin;
     Oracles private oracles;
     Rewards private rewards;
     MintableToken private mvuToken;
     Wagers private wagers;
+    PoolWagers private poolWagers;
 
     bool public contractPaused = false;
     bool private randomNumRequired = false;
@@ -36,7 +38,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
     mapping (address => bool) private abandoned;
 
     mapping (address => uint) private lastLotteryEntryTimes;
-    address[] private lotteryEntrants;
+    address payable[] private lotteryEntrants;
 
 
     event NewOraclizeQuery (string description);
@@ -61,15 +63,20 @@ contract Mevu is AuthorityGranter, usingOraclize {
         _;
     }
 
+    modifier onlyPoolBettor (bytes32 wagerId) {
+        require (msg.sender == poolWagers.getMaker(wagerId));
+        _;
+    }
+
     // Constructor
-    constructor () payable {
-        OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
+    constructor () payable public {
+       // OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
         lastMonth = 1; // Last entries default to 0, set the last month to 1 to allow people to enter the first lottery
         nextMonth = block.timestamp + monthSeconds;
         mevuWallet = msg.sender;
     }
 
-    function () payable {
+    function () payable external {
 
     }
 
@@ -83,9 +90,11 @@ contract Mevu is AuthorityGranter, usingOraclize {
 
     function setWagersContract (address thisAddr) external onlyOwner { wagers = Wagers(thisAddr); }
 
+    function setPoolWagersContract (address thisAddr) external onlyOwner { poolWagers = PoolWagers(thisAddr); }
+
     function setMvuTokenContract (address thisAddr) external onlyOwner { mvuToken = MintableToken(thisAddr); }
 
-    function setMevuWallet (address newAddress) external onlyOwner {
+    function setMevuWallet (address payable newAddress) external onlyOwner {
         mevuWallet = newAddress;
     }
 
@@ -125,36 +134,35 @@ contract Mevu is AuthorityGranter, usingOraclize {
         return true;
     }
 
-    /** @dev Runs lottery
-      */
-    function runLottery() {
-        require(block.timestamp > nextMonth);
-        require(lotteryEntrants.length > 0);
-        bytes32 queryId = oraclize_query("WolframAlpha", strConcat("random number between 0 and ", uint2str(lotteryEntrants.length - 1)));
-                        //oraclize_newRandomDSQuery(/* Delay */ 0, /* Random Bytes */ 7, /* Callback Gas */ admin.getCallbackGasLimit());
-        emit NewOraclizeQuery("Getting random number for picking the lottery winner");
-        validIds[queryId] = true;
-    }
+  
+    // function runLottery() {
+    //     require(block.timestamp > nextMonth);
+    //     require(lotteryEntrants.length > 0);
+    //     bytes32 queryId = oraclize_query("WolframAlpha", strConcat("random number between 0 and ", uint2str(lotteryEntrants.length - 1)));
+    //                     //oraclize_newRandomDSQuery(/* Delay */ 0, /* Random Bytes */ 7, /* Callback Gas */ admin.getCallbackGasLimit());
+    //     emit NewOraclizeQuery("Getting random number for picking the lottery winner");
+    //     validIds[queryId] = true;
+    // }
 
-    function __callback (bytes32 _queryId, string _result) public {
-        emit OraclizeQueryResponse(_result);
-        require(validIds[_queryId]);
-        require(msg.sender == oraclize_cbAddress());
+    // function __callback (bytes32 _queryId, string _result) public {
+    //     emit OraclizeQueryResponse(_result);
+    //     require(validIds[_queryId]);
+    //     require(msg.sender == oraclize_cbAddress());
 
-        // Invalidate the query ID so it cannot be reused
-        validIds[_queryId] = false;
+    //     // Invalidate the query ID so it cannot be reused
+    //     validIds[_queryId] = false;
 
-        uint maxRange = lotteryEntrants.length; // The max number should be no more than the number of entrants - 1
-        uint randomNumber = parseInt(_result) % maxRange;
-        emit ReceivedRandomNumber(randomNumber);
+    //     uint maxRange = lotteryEntrants.length; // The max number should be no more than the number of entrants - 1
+    //     uint randomNumber = parseInt(_result) % maxRange;
+    //     emit ReceivedRandomNumber(randomNumber);
 
-        payoutLottery(randomNumber);
-    }
+    //     payoutLottery(randomNumber);
+    // }
 
     /** @dev Pays out the monthly lottery balance to a random oracle.
       */
     function payoutLottery(uint winnerIndex) notPaused internal {
-        address potentialWinner = lotteryEntrants[winnerIndex];
+        address payable potentialWinner = lotteryEntrants[winnerIndex];
         if (allowedToWin(potentialWinner)) {
             uint thisWin = lotteryBalance;
             lotteryEntrants.length = 0;
@@ -167,7 +175,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
             lotteryEntrants[winnerIndex] = lotteryEntrants[lotteryEntrants.length - 1];
             lotteryEntrants.length = lotteryEntrants.length - 1;
             require(oracles.getOracleListLength() > 0);
-            runLottery();
+            //runLottery();
         }
     }
 
@@ -191,6 +199,20 @@ contract Mevu is AuthorityGranter, usingOraclize {
             rewards.addUnlockedEth(wagers.getTaker(wagerId), (wagers.getWinningValue(wagerId) - wagers.getOrigValue(wagerId)));
         }
     }
+
+      // Players should call this when an event has been cancelled after they have made a poolwager
+    function poolPlayerRefund (bytes32 wagerId) external  onlyPoolBettor(wagerId) {
+        require (events.getCancelled(poolWagers.getEventId(wagerId)));
+        require (!poolWagers.getRefund(msg.sender, wagerId));
+        poolWagers.setRefund(msg.sender, wagerId);
+        address maker = poolWagers.getMaker(wagerId);
+        poolWagers.setSettled(wagerId);
+       
+        rewards.addUnlockedEth(maker, poolWagers.getOrigValue(wagerId));
+      
+    }
+
+
 
     function pauseContract()
     external
@@ -246,13 +268,13 @@ contract Mevu is AuthorityGranter, usingOraclize {
 
     function subFromPlayerFunds (uint amount) external onlyAuth { playerFunds -= amount; }
 
-    function transferEth (address recipient, uint amount) external onlyAuth { recipient.transfer(amount); }
+    function transferEth (address payable recipient, uint amount) external onlyAuth { recipient.transfer(amount); }
 
     function getContractPaused() external view returns (bool) { return contractPaused; }
 
     function getOracleFee () external view returns (uint256) { return oracleServiceFee; }
 
-    function transferTokensToMevu (address oracle, uint mvuStake) internal { mvuToken.transferFrom(oracle, this, mvuStake); }
+    function transferTokensToMevu (address payable oracle, uint mvuStake) internal { mvuToken.transferFrom(oracle, address(this), mvuStake); }
 
     function transferTokensFromMevu (address oracle, uint mvuStake) external onlyAuth { mvuToken.transfer(oracle, mvuStake); }
 
@@ -277,7 +299,7 @@ contract Mevu is AuthorityGranter, usingOraclize {
         return ret;
     }
 
-    function bytes32ToString (bytes32 data) internal view returns (string) {
+    function bytes32ToString (bytes32 data) internal view returns (string memory) {
         bytes memory bytesString = new bytes(32);
         for (uint j=0; j<32; j++) {
             byte char = byte(bytes32(uint(data) * 2 ** (8 * j)));

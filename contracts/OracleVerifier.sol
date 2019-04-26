@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 import "./AuthorityGranter.sol";
 
 /** @title Oracle Verifier -- This contract controls the adding to and removal from the list of verified oracles.
@@ -13,7 +13,7 @@ contract OracleVerifier is AuthorityGranter {
     mapping (address => uint) public timesRemoved;
     bytes32 empty;
 
-    constructor() {
+    constructor() public {
         mevuAccount = msg.sender;
     }
     
@@ -21,7 +21,7 @@ contract OracleVerifier is AuthorityGranter {
       * @param newOracle - address of the new oracle.
       * @param phoneNumber - ten digit phone number belonging to Oracle which has already been verified.
       */
-    function addVerifiedOracle(address newOracle, uint phoneNumber) onlyAuth {
+    function addVerifiedOracle(address newOracle, uint phoneNumber) external onlyAuth {
         bytes32 phoneHash = keccak256(toBytes(phoneNumber));
         if (verified[newOracle]) {
             revert();
@@ -47,12 +47,13 @@ contract OracleVerifier is AuthorityGranter {
         return verified[oracle];        
     }
 
-   function toBytes(uint256 x) constant returns (bytes c) {
+   function toBytes(uint256 x) public view returns (bytes memory c)  {
         bytes32 b = bytes32(x);
         c = new bytes(32);
         for (uint i=0; i < 32; i++) {
             c[i] = b[i];
         }
+      
     }    
 
 }
